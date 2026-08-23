@@ -65,7 +65,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # 헤더 영역
-st.markdown('<div class="main-title">📈 Mark Minervini Trend Template & VCP 스크리너</div>', unsafe_allow_html=True)
+st.markdown('<div class="main-title">Mark Minervini Trend Template & VCP 스크리너</div>', unsafe_allow_html=True)
 st.markdown('<div class="sub-title">초성장주 발굴을 위한 마크 미너비니의 8대 상승 추세 템플릿(MTT) 조건 및 VCP(변동성 수축 패턴) 스크리너</div>', unsafe_allow_html=True)
 
 # 기법 설명 익스팬더
