@@ -35,15 +35,17 @@ st.set_page_config(
 st.markdown("""
 <style>
     .main-title {
-        font-size: 2.1rem;
+        font-size: 2.0rem;
         font-weight: 700;
         color: #8AB4F8; /* 밝은 청색 계열 */
         margin-bottom: 0.2rem;
+        text-align: center;
     }
     .sub-title {
-        font-size: 1.05rem;
+        font-size: 0.95rem;
         color: #BDC1C6;
         margin-bottom: 1.8rem;
+        text-align: center;
     }
     .metric-card {
         background-color: #202124;
@@ -60,6 +62,22 @@ st.markdown("""
     .status-fail {
         color: #D93025;
         font-weight: bold;
+    }
+    /* 안내문(Alert) 폰트 크기 및 이모지 아이콘 크기 축소 */
+    div[data-testid="stAlert"] {
+        padding: 0.55rem 0.85rem;
+    }
+    div[data-testid="stAlert"] [data-testid="stAlertDynamicIcon"],
+    div[data-testid="stAlert"] span[role="img"],
+    div[data-testid="stAlert"] svg {
+        font-size: 1.05rem !important;
+        width: 1.05rem !important;
+        height: 1.05rem !important;
+    }
+    div[data-testid="stAlert"] [data-testid="stMarkdownContainer"] p {
+        font-size: 0.88rem !important;
+        line-height: 1.5;
+        margin-bottom: 0;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -634,7 +652,7 @@ with tab1:
                 else:
                     st.error("해당 종목의 상세 차트 데이터를 가져오는데 실패했습니다.")
     else:
-        st.info("💡 사이드바에서 조건을 확인한 뒤 **'🚀 스크리닝 시작'** 버튼을 클릭하시면 포착된 초성장 종목의 리스트와 차트가 표시됩니다.")
+        st.info("왼쪽 사이드바에서 대상 시장 및 파라미터를 확인한 후 **'스크리닝 시작'** 버튼을 눌러주세요.", icon="💡")
 
 # ----------------- 탭 2: 개별 관심 종목 수동 분석기 -----------------
 with tab2:
