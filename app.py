@@ -86,11 +86,13 @@ st.markdown("""
         line-height: 1.6;
     }
     /* 엑셀 다운로드 버튼 우측 정렬 */
+    .stDownloadButton,
     .st-key-excel_download_container {
         display: flex;
         justify-content: flex-end;
         align-items: center;
     }
+    .stDownloadButton button,
     .st-key-excel_download_container [data-testid="stDownloadButton"] {
         display: flex;
         justify-content: flex-end;
@@ -425,7 +427,7 @@ with tab1:
             with col_btn:
                 with st.container(key="excel_download_container", horizontal=True, horizontal_alignment="right"):
                     st.download_button(
-                        label="엑셀 파일 다운로드",
+                        label="📥 엑셀 파일 다운로드",
                         data=excel_data,
                         file_name=excel_filename,
                         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
