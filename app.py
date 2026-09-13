@@ -307,7 +307,7 @@ if start_screening:
                 st.session_state.market_type_used = market_choice
                 st.session_state.vcp_applied = apply_vcp
                 
-                status_text.success("🎉 스크리닝 작업이 정상 완료되었습니다!")
+                status_text.empty()
             except Exception as e:
                 status_text.error(f"스크리닝 필터 작업 중 오류 발생: {e}")
         else:
@@ -316,11 +316,13 @@ if start_screening:
         status_text.error("대상 시장의 종목 리스트가 유효하지 않습니다.")
 
 # ----------------- 결과 출력 및 탭 레이아웃 -----------------
+if st.session_state.screened_df is not None:
+    st.success(f"🔍 스크리닝 완료! (실행 시각: {st.session_state.last_run_time} | 대상: {st.session_state.market_type_used})")
+
 tab1, tab2 = st.tabs(["🔍 스크리닝 결과", "🔬 개별 종목 분석기"])
 
 with tab1:
     if st.session_state.screened_df is not None:
-        st.success(f"📊 분석 결과 리포트 (실행: {st.session_state.last_run_time} | 대상: {st.session_state.market_type_used})")
         if st.session_state.screened_df.empty:
             st.warning("설정하신 조건을 충족하는 종목이 포착되지 않았습니다. 조건 범위(RS Rating 하한, Amp1 한계 등)를 넓혀 다시 시작해 보세요.")
         else:
