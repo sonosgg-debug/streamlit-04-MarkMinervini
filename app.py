@@ -79,6 +79,12 @@ st.markdown("""
         line-height: 1.5;
         margin-bottom: 0;
     }
+    /* 규칙 자가진단표 본문 폰트 크기 축소 (1pt 축소) */
+    .st-key-diagnosis_container [data-testid="stMarkdownContainer"] p,
+    .st-key-manual_diagnosis_container [data-testid="stMarkdownContainer"] p {
+        font-size: 0.9rem !important;
+        line-height: 1.6;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -299,11 +305,10 @@ tab1, tab2 = st.tabs(["🔍 스크리닝 결과", "🔬 개별 종목 분석기"
 with tab1:
     if st.session_state.screened_df is not None:
         st.success(f"📊 분석 결과 리포트 (실행: {st.session_state.last_run_time} | 대상: {st.session_state.market_type_used})")
-        
         if st.session_state.screened_df.empty:
             st.warning("설정하신 조건을 충족하는 종목이 포착되지 않았습니다. 조건 범위(RS Rating 하한, Amp1 한계 등)를 넓혀 다시 시작해 보세요.")
         else:
-            st.markdown(f"#### 🎯 포착된 종목 리스트 (총 {len(st.session_state.screened_df)}개)")
+            st.markdown(f'#### <span style="color: #8AB4F8;">스크리닝 결과 (총 {len(st.session_state.screened_df)}개 종목)</span>', unsafe_allow_html=True)
             
             # 대시보드 화면용 테이블 포맷팅 가공
             df_display = st.session_state.screened_df.copy()
@@ -342,8 +347,6 @@ with tab1:
             st.dataframe(df_display_ko, use_container_width=True)
             
             # --- 엑셀 저장 및 다운로드 구현 ---
-            st.markdown("### 📥 엑셀 레포트 다운로드")
-            
             excel_buffer = io.BytesIO()
             with pd.ExcelWriter(excel_buffer, engine='openpyxl') as writer:
                 df_excel = st.session_state.screened_df.copy()
@@ -440,16 +443,16 @@ with tab1:
             excel_filename = f"MarkMinerviniMTT-{market_suffix}{vcp_suffix}-{today_str}.xlsx"
             
             st.download_button(
-                label="📥 스타일이 지정된 엑셀 보고서 다운로드 (.xlsx)",
+                label="엑셀 파일 다운로드",
                 data=excel_data,
                 file_name=excel_filename,
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                use_container_width=True
+                use_container_width=False
             )
             
             # --- 개별 종목 차트 시각화 구역 ---
             st.markdown("---")
-            st.markdown("### 📊 포착 종목 변동성 수축(VCP) 및 추세 시각화 차트")
+            st.markdown('#### <span style="color: #8AB4F8;">포착 종목 변동성 수축(VCP) 및 추세 시각화 차트</span>', unsafe_allow_html=True)
             
             selected_stock_name = st.selectbox(
                 "차트로 분석할 종목을 포착 리스트에서 선택하세요:",
@@ -633,22 +636,23 @@ with tab1:
                     
                     # --- 규칙 진단 결과 카드 레이아웃 ---
                     st.markdown("##### 🔍 미너비니의 규칙 자가진단표")
-                    col_r1, col_r2 = st.columns(2)
                     
                     def get_status_str(cond):
                         return "🟢 충족 (Pass)" if cond else "🔴 미흡 (Fail)"
                         
-                    with col_r1:
-                        st.write(f"1. 주가 > 150MA & 200MA: {get_status_str(cond1)}  *(현재가: {fmt_curr(current_price, selected_ticker)} | 150MA: {fmt_curr(ma150_val, selected_ticker)} | 200MA: {fmt_curr(ma200_val, selected_ticker)})*")
-                        st.write(f"2. 이평선 우상향 정배열 (150MA > 200MA): {get_status_str(cond2)}  *(150MA: {fmt_curr(ma150_val, selected_ticker)} > 200MA: {fmt_curr(ma200_val, selected_ticker)})*")
-                        st.write(f"3. 200MA 한 달 이상 상승세: {get_status_str(cond3)}  *(현재 200MA: {fmt_curr(ma200_val, selected_ticker)} | 한달 전: {fmt_curr(ma200_prev_val, selected_ticker)})*")
-                        st.write(f"4. 50MA가 장기 이평 위에 위치: {get_status_str(cond4)}  *(50MA: {fmt_curr(ma50_val, selected_ticker)} | 150MA: {fmt_curr(ma150_val, selected_ticker)})*")
-                        
-                    with col_r2:
-                        st.write(f"5. 현재 주가가 50MA 위에 위치: {get_status_str(cond5)}  *(현재가: {fmt_curr(current_price, selected_ticker)} | 50MA: {fmt_curr(ma50_val, selected_ticker)})*")
-                        st.write(f"6. 52주 신저가 대비 30% 이상 상승: {get_status_str(cond6)}  *(현재가: {fmt_curr(current_price, selected_ticker)} | 52주 최저: {fmt_curr(l52_val, selected_ticker)} | 상승폭: +{row['Pct_Above_Low']:.2f}%)*")
-                        st.write(f"7. 52주 신고가 대비 25% 이내 근접: {get_status_str(cond7)}  *(현재가: {fmt_curr(current_price, selected_ticker)} | 52주 최고: {fmt_curr(h52_val, selected_ticker)} | 낙폭: -{row['Pct_Below_High']:.2f}%)*")
-                        st.write(f"8. 상대강도(RS Rating) 요건 (70 이상): {get_status_str(cond8)}  *(개별 종목 RS Rating: **{stock_rs}** | 기준값: {rs_rating_thresh})*")
+                    with st.container(key="diagnosis_container"):
+                        col_r1, col_r2 = st.columns(2)
+                        with col_r1:
+                            st.write(f"1. 주가 > 150MA & 200MA: {get_status_str(cond1)}  *(현재가: {fmt_curr(current_price, selected_ticker)} | 150MA: {fmt_curr(ma150_val, selected_ticker)} | 200MA: {fmt_curr(ma200_val, selected_ticker)})*")
+                            st.write(f"2. 이평선 우상향 정배열 (150MA > 200MA): {get_status_str(cond2)}  *(150MA: {fmt_curr(ma150_val, selected_ticker)} > 200MA: {fmt_curr(ma200_val, selected_ticker)})*")
+                            st.write(f"3. 200MA 한 달 이상 상승세: {get_status_str(cond3)}  *(현재 200MA: {fmt_curr(ma200_val, selected_ticker)} | 한달 전: {fmt_curr(ma200_prev_val, selected_ticker)})*")
+                            st.write(f"4. 50MA가 장기 이평 위에 위치: {get_status_str(cond4)}  *(50MA: {fmt_curr(ma50_val, selected_ticker)} | 150MA: {fmt_curr(ma150_val, selected_ticker)})*")
+                            
+                        with col_r2:
+                            st.write(f"5. 현재 주가가 50MA 위에 위치: {get_status_str(cond5)}  *(현재가: {fmt_curr(current_price, selected_ticker)} | 50MA: {fmt_curr(ma50_val, selected_ticker)})*")
+                            st.write(f"6. 52주 신저가 대비 30% 이상 상승: {get_status_str(cond6)}  *(현재가: {fmt_curr(current_price, selected_ticker)} | 52주 최저: {fmt_curr(l52_val, selected_ticker)} | 상승폭: +{row['Pct_Above_Low']:.2f}%)*")
+                            st.write(f"7. 52주 신고가 대비 25% 이내 근접: {get_status_str(cond7)}  *(현재가: {fmt_curr(current_price, selected_ticker)} | 52주 최고: {fmt_curr(h52_val, selected_ticker)} | 낙폭: -{row['Pct_Below_High']:.2f}%)*")
+                            st.write(f"8. 상대강도(RS Rating) 요건 (70 이상): {get_status_str(cond8)}  *(개별 종목 RS Rating: **{stock_rs}** | 기준값: {rs_rating_thresh})*")
                 else:
                     st.error("해당 종목의 상세 차트 데이터를 가져오는데 실패했습니다.")
     else:
@@ -779,24 +783,25 @@ with tab2:
             
             # 2. 결과 종합 진단 표
             st.markdown("##### ⚙️ 종목 상세 상태 검토")
-            col_m1, col_m2 = st.columns(2)
             
             def get_status_str(cond):
                 if cond is None:
                     return "⚪ 판정 불가 (RS 데이터 누락)"
                 return "🟢 충족 (Pass)" if cond else "🔴 미협 (Fail)"
                 
-            with col_m1:
-                st.write(f"1. 주가 > 150MA & 200MA: {get_status_str(cond1_m)}  *(현재가: {fmt_curr(curr_p, manual_ticker)} | 150MA: {fmt_curr(ma150_m, manual_ticker)} | 200MA: {fmt_curr(ma200_m, manual_ticker)})*")
-                st.write(f"2. 이평선 우상향 정배열 (150MA > 200MA): {get_status_str(cond2_m)}  *(150MA: {fmt_curr(ma150_m, manual_ticker)} > 200MA: {fmt_curr(ma200_m, manual_ticker)})*")
-                st.write(f"3. 200MA 한 달 이상 상승세: {get_status_str(cond3_m)}  *(현재 200MA: {fmt_curr(ma200_m, manual_ticker)} | 한달 전: {fmt_curr(ma200_prev_m, manual_ticker)})*")
-                st.write(f"4. 50MA가 장기 이평 위에 위치: {get_status_str(cond4_m)}  *(50MA: {fmt_curr(ma50_m, manual_ticker)} | 150MA: {fmt_curr(ma150_m, manual_ticker)})*")
-                
-            with col_m2:
-                st.write(f"5. 현재 주가가 50MA 위에 위치: {get_status_str(cond5_m)}  *(현재가: {fmt_curr(curr_p, manual_ticker)} | 50MA: {fmt_curr(ma50_m, manual_ticker)})*")
-                st.write(f"6. 52주 신저가 대비 30% 이상 상승: {get_status_str(cond6_m)}  *(현재가: {fmt_curr(curr_p, manual_ticker)} | 52주 최저: {fmt_curr(l52_m, manual_ticker)} | 상승폭: +{c_above_low:.2f}%)*")
-                st.write(f"7. 52주 신고가 대비 25% 이내 근접: {get_status_str(cond7_m)}  *(현재가: {fmt_curr(curr_p, manual_ticker)} | 52주 최고: {fmt_curr(h52_m, manual_ticker)} | 낙폭: -{c_below_high:.2f}%)*")
-                st.write(f"8. 상대강도(RS Rating) 요건 (70 이상): {get_status_str(cond8_m)}  *(개별 종목 RS Rating: **{rs_rating_str}**)*")
+            with st.container(key="manual_diagnosis_container"):
+                col_m1, col_m2 = st.columns(2)
+                with col_m1:
+                    st.write(f"1. 주가 > 150MA & 200MA: {get_status_str(cond1_m)}  *(현재가: {fmt_curr(curr_p, manual_ticker)} | 150MA: {fmt_curr(ma150_m, manual_ticker)} | 200MA: {fmt_curr(ma200_m, manual_ticker)})*")
+                    st.write(f"2. 이평선 우상향 정배열 (150MA > 200MA): {get_status_str(cond2_m)}  *(150MA: {fmt_curr(ma150_m, manual_ticker)} > 200MA: {fmt_curr(ma200_m, manual_ticker)})*")
+                    st.write(f"3. 200MA 한 달 이상 상승세: {get_status_str(cond3_m)}  *(현재 200MA: {fmt_curr(ma200_m, manual_ticker)} | 한달 전: {fmt_curr(ma200_prev_m, manual_ticker)})*")
+                    st.write(f"4. 50MA가 장기 이평 위에 위치: {get_status_str(cond4_m)}  *(50MA: {fmt_curr(ma50_m, manual_ticker)} | 150MA: {fmt_curr(ma150_m, manual_ticker)})*")
+                    
+                with col_m2:
+                    st.write(f"5. 현재 주가가 50MA 위에 위치: {get_status_str(cond5_m)}  *(현재가: {fmt_curr(curr_p, manual_ticker)} | 50MA: {fmt_curr(ma50_m, manual_ticker)})*")
+                    st.write(f"6. 52주 신저가 대비 30% 이상 상승: {get_status_str(cond6_m)}  *(현재가: {fmt_curr(curr_p, manual_ticker)} | 52주 최저: {fmt_curr(l52_m, manual_ticker)} | 상승폭: +{c_above_low:.2f}%)*")
+                    st.write(f"7. 52주 신고가 대비 25% 이내 근접: {get_status_str(cond7_m)}  *(현재가: {fmt_curr(curr_p, manual_ticker)} | 52주 최고: {fmt_curr(h52_m, manual_ticker)} | 낙폭: -{c_below_high:.2f}%)*")
+                    st.write(f"8. 상대강도(RS Rating) 요건 (70 이상): {get_status_str(cond8_m)}  *(개별 종목 RS Rating: **{rs_rating_str}**)*")
                 
             st.markdown("---")
             if is_vcp_m:
