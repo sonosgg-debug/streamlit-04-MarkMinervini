@@ -85,6 +85,20 @@ st.markdown("""
         font-size: 0.9rem !important;
         line-height: 1.6;
     }
+    /* 엑셀 다운로드 버튼 우측 정렬 */
+    .st-key-excel_download_container {
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+    }
+    .st-key-excel_download_container [data-testid="stDownloadButton"] {
+        display: flex;
+        justify-content: flex-end;
+        margin-left: auto;
+    }
+    .st-key-excel_download_container [data-testid="stDownloadButton"] button {
+        margin-left: auto;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -308,45 +322,7 @@ with tab1:
         if st.session_state.screened_df.empty:
             st.warning("설정하신 조건을 충족하는 종목이 포착되지 않았습니다. 조건 범위(RS Rating 하한, Amp1 한계 등)를 넓혀 다시 시작해 보세요.")
         else:
-            st.markdown(f'#### <span style="color: #8AB4F8;">스크리닝 결과 (총 {len(st.session_state.screened_df)}개 종목)</span>', unsafe_allow_html=True)
-            
-            # 대시보드 화면용 테이블 포맷팅 가공
-            df_display = st.session_state.screened_df.copy()
-            df_display['Current_Price'] = df_display.apply(lambda r: fmt_curr(r['Current_Price'], r['Ticker']), axis=1)
-            df_display['MA_50'] = df_display.apply(lambda r: fmt_curr(r['MA_50'], r['Ticker']), axis=1)
-            df_display['MA_150'] = df_display.apply(lambda r: fmt_curr(r['MA_150'], r['Ticker']), axis=1)
-            df_display['MA_200'] = df_display.apply(lambda r: fmt_curr(r['MA_200'], r['Ticker']), axis=1)
-            df_display['52W_High'] = df_display.apply(lambda r: fmt_curr(r['52W_High'], r['Ticker']), axis=1)
-            df_display['52W_Low'] = df_display.apply(lambda r: fmt_curr(r['52W_Low'], r['Ticker']), axis=1)
-            
-            df_display['Pct_Below_High'] = df_display['Pct_Below_High'].map('{:.2f}%'.format)
-            df_display['Pct_Above_Low'] = df_display['Pct_Above_Low'].map('{:.2f}%'.format)
-            
-            def format_vcp_col(val):
-                if val == "N/A":
-                    return val
-                return f"{val:.2f}%"
-            df_display['VCP_Amp1'] = df_display['VCP_Amp1'].apply(format_vcp_col)
-            
-            # 한글 컬럼 매핑 및 전시
-            df_display_ko = df_display.rename(columns={
-                'Ticker': '티커',
-                'Name': '종목명',
-                'Current_Price': '현재가',
-                'RS_Rating': '상대강도(RS)',
-                'VCP_Amp1': '마지막진폭(Amp1)',
-                'Pct_Below_High': '신고가대비(%)',
-                'Pct_Above_Low': '신저가대비(%)',
-                'MA_50': '50일 이평',
-                'MA_150': '150일 이평',
-                'MA_200': '200일 이평',
-                '52W_High': '52주 최고가',
-                '52W_Low': '52주 최저가'
-            })
-            
-            st.dataframe(df_display_ko, use_container_width=True)
-            
-            # --- 엑셀 저장 및 다운로드 구현 ---
+            # --- 엑셀 저장용 데이터 버퍼 생성 ---
             excel_buffer = io.BytesIO()
             with pd.ExcelWriter(excel_buffer, engine='openpyxl') as writer:
                 df_excel = st.session_state.screened_df.copy()
@@ -441,14 +417,56 @@ with tab1:
             today_str = datetime.date.today().strftime('%Y-%m-%d')
             vcp_suffix = "-VCP" if st.session_state.vcp_applied else ""
             excel_filename = f"MarkMinerviniMTT-{market_suffix}{vcp_suffix}-{today_str}.xlsx"
+
+            # --- 결과 타이틀 및 엑셀 다운로드 버튼 (동일 라인 우측 끝 정렬) ---
+            col_title, col_btn = st.columns([0.75, 0.25], vertical_alignment="center")
+            with col_title:
+                st.markdown(f'#### <span style="color: #8AB4F8;">스크리닝 결과 (총 {len(st.session_state.screened_df)}개 종목)</span>', unsafe_allow_html=True)
+            with col_btn:
+                with st.container(key="excel_download_container", horizontal=True, horizontal_alignment="right"):
+                    st.download_button(
+                        label="엑셀 파일 다운로드",
+                        data=excel_data,
+                        file_name=excel_filename,
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        use_container_width=False
+                    )
             
-            st.download_button(
-                label="엑셀 파일 다운로드",
-                data=excel_data,
-                file_name=excel_filename,
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                use_container_width=False
-            )
+            # 대시보드 화면용 테이블 포맷팅 가공
+            df_display = st.session_state.screened_df.copy()
+            df_display['Current_Price'] = df_display.apply(lambda r: fmt_curr(r['Current_Price'], r['Ticker']), axis=1)
+            df_display['MA_50'] = df_display.apply(lambda r: fmt_curr(r['MA_50'], r['Ticker']), axis=1)
+            df_display['MA_150'] = df_display.apply(lambda r: fmt_curr(r['MA_150'], r['Ticker']), axis=1)
+            df_display['MA_200'] = df_display.apply(lambda r: fmt_curr(r['MA_200'], r['Ticker']), axis=1)
+            df_display['52W_High'] = df_display.apply(lambda r: fmt_curr(r['52W_High'], r['Ticker']), axis=1)
+            df_display['52W_Low'] = df_display.apply(lambda r: fmt_curr(r['52W_Low'], r['Ticker']), axis=1)
+            
+            df_display['Pct_Below_High'] = df_display['Pct_Below_High'].map('{:.2f}%'.format)
+            df_display['Pct_Above_Low'] = df_display['Pct_Above_Low'].map('{:.2f}%'.format)
+            
+            def format_vcp_col(val):
+                if val == "N/A":
+                    return val
+                return f"{val:.2f}%"
+            df_display['VCP_Amp1'] = df_display['VCP_Amp1'].apply(format_vcp_col)
+            
+            # 한글 컬럼 매핑 및 전시
+            df_display_ko = df_display.rename(columns={
+                'Ticker': '티커',
+                'Name': '종목명',
+                'Current_Price': '현재가',
+                'RS_Rating': '상대강도(RS)',
+                'VCP_Amp1': '마지막진폭(Amp1)',
+                'Pct_Below_High': '신고가대비(%)',
+                'Pct_Above_Low': '신저가대비(%)',
+                'MA_50': '50일 이평',
+                'MA_150': '150일 이평',
+                'MA_200': '200일 이평',
+                '52W_High': '52주 최고가',
+                '52W_Low': '52주 최저가'
+            })
+            
+            st.dataframe(df_display_ko, use_container_width=True)
             
             # --- 개별 종목 차트 시각화 구역 ---
             st.markdown("---")
