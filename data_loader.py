@@ -36,12 +36,22 @@ def get_stock_list(market_code: str) -> pd.DataFrame:
     
     if market_code == 'KS':
         df = fdr.StockListing('KOSPI')
-        df['ticker'] = df['Code'].astype(str).str.zfill(6) + '.KS'
         df['name'] = df['Name']
+        # 한국 주식 우선주 및 스팩 필터링 (21, 22 앱과 동일 기준)
+        df = df[~df['name'].str.endswith('우')]
+        df = df[~df['name'].str.endswith('우B')]
+        df = df[~df['name'].str.contains('스팩')]
+        df = df[~df['name'].str.contains('제1호')]
+        df['ticker'] = df['Code'].astype(str).str.zfill(6) + '.KS'
     elif market_code == 'KQ':
         df = fdr.StockListing('KOSDAQ')
-        df['ticker'] = df['Code'].astype(str).str.zfill(6) + '.KQ'
         df['name'] = df['Name']
+        # 한국 주식 우선주 및 스팩 필터링 (21, 22 앱과 동일 기준)
+        df = df[~df['name'].str.endswith('우')]
+        df = df[~df['name'].str.endswith('우B')]
+        df = df[~df['name'].str.contains('스팩')]
+        df = df[~df['name'].str.contains('제1호')]
+        df['ticker'] = df['Code'].astype(str).str.zfill(6) + '.KQ'
     elif market_code == 'SP':
         df = fdr.StockListing('S&P500')
         df['ticker'] = df['Symbol'].str.replace('.', '-', regex=False)

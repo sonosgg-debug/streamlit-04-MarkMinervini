@@ -232,16 +232,22 @@ if start_screening:
     market_code = market_map[market_choice]
     
     # 1. 상장 종목 목록 가져오기
-    status_text = st.empty()
-    status_text.info(f"⏳ {market_choice} 상장 종목 리스트를 불러오고 있습니다...")
-    
-    try:
-        stock_df = get_stock_list(market_code)
-    except Exception as e:
-        st.error(f"종목 리스트 수집 중 에러가 발생했습니다: {e}")
-        stock_df = pd.DataFrame()
+    with st.spinner("상장 종목 목록을 가져오는 중..."):
+        try:
+            stock_df = get_stock_list(market_code)
+            total_count = len(stock_df)
+            if market_code in ['KS', 'KQ']:
+                st.info(f"수집 대상 종목: 총 {total_count}개 (우선주/스팩 필터링 완료)")
+            else:
+                st.info(f"수집 대상 종목: 총 {total_count}개")
+        except Exception as e:
+            st.error(f"종목 목록 수집 실패: {e}")
+            stock_df = pd.DataFrame()
         
     if not stock_df.empty:
+        progress_bar = st.progress(0.0)
+        status_text = st.empty()
+
         if limit_tickers > 0:
             status_text.warning(f"⚠️ 빠른 테스트를 위해 종목 개수를 상위 {limit_tickers}개로 제한합니다.")
             stock_df = stock_df.head(limit_tickers)
@@ -249,16 +255,12 @@ if start_screening:
         tickers = stock_df['ticker'].tolist()
         
         # 2. 가격 데이터 배치 다운로드
-        status_text.info(f"⏳ 총 {len(tickers)}개 종목의 과거 2년 가격 데이터를 다운로드 중입니다. (청크 크기: {chunk_size})...")
-        progress_bar = st.progress(0.0)
-        
-        all_data = []
         total_chunks = (len(tickers) + chunk_size - 1) // chunk_size
         
         # data_loader.download_prices_chunked 내부 루프를 대시보드 프로그레스 바 연동을 위해 변형
         from data_loader import suppress_stderr
         
-        success_download = True
+        all_data = []
         for i in range(0, len(tickers), chunk_size):
             chunk = tickers[i:i + chunk_size]
             chunk_num = i // chunk_size + 1
@@ -283,8 +285,6 @@ if start_screening:
                 time.sleep(2.0)
                 continue
                 
-        progress_bar.empty()
-        
         if all_data:
             price_data = pd.concat(all_data, axis=1)
             status_text.info("⏳ 이동평균선 및 상대 강도(RS) 계산 및 미너비니 규칙 필터링을 진행 중입니다...")
@@ -310,13 +310,16 @@ if start_screening:
                 st.session_state.market_type_used = market_choice
                 st.session_state.vcp_applied = apply_vcp
                 
+                progress_bar.empty()
                 status_text.empty()
             except Exception as e:
+                progress_bar.empty()
                 status_text.error(f"스크리닝 필터 작업 중 오류 발생: {e}")
         else:
+            progress_bar.empty()
             status_text.error("종목의 역사적 가격 데이터 다운로드에 실패하여 분석을 수행하지 못했습니다.")
     else:
-        status_text.error("대상 시장의 종목 리스트가 유효하지 않습니다.")
+        st.error("대상 시장의 종목 리스트가 유효하지 않습니다.")
 
 # ----------------- 결과 출력 및 탭 레이아웃 -----------------
 if st.session_state.screened_df is not None:
