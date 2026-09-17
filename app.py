@@ -738,6 +738,15 @@ with tab1:
                         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
                     )
                     
+                    # 주말 및 공휴일 공백 제거 (5일 주기 끊김 및 0값 방지)
+                    dt_all = pd.date_range(start=df_chart.index[0], end=df_chart.index[-1], freq='B')
+                    existing_dates = set(pd.to_datetime(df_chart.index).normalize())
+                    holidays = [d.strftime('%Y-%m-%d') for d in dt_all if d.normalize() not in existing_dates]
+                    rbreaks = [dict(bounds=["sat", "mon"])]
+                    if holidays:
+                        rbreaks.append(dict(values=holidays))
+                    fig.update_xaxes(rangebreaks=rbreaks)
+                    
                     st.plotly_chart(fig, use_container_width=True)
                     
                     # --- 규칙 진단 결과 카드 레이아웃 ---
@@ -884,6 +893,15 @@ with tab2:
                 xaxis_rangeslider_visible=False,
                 legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
             )
+            
+            # 주말 및 공휴일 공백 제거 (5일 주기 끊김 및 0값 방지)
+            dt_all_m = pd.date_range(start=df_m.index[0], end=df_m.index[-1], freq='B')
+            existing_dates_m = set(pd.to_datetime(df_m.index).normalize())
+            holidays_m = [d.strftime('%Y-%m-%d') for d in dt_all_m if d.normalize() not in existing_dates_m]
+            rbreaks_m = [dict(bounds=["sat", "mon"])]
+            if holidays_m:
+                rbreaks_m.append(dict(values=holidays_m))
+            fig_m.update_xaxes(rangebreaks=rbreaks_m)
             
             st.plotly_chart(fig_m, use_container_width=True)
             
