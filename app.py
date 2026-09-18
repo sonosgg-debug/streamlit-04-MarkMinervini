@@ -38,11 +38,12 @@ st.set_page_config(
 st.markdown("""
 <style>
     .main-title {
-        font-size: 1.9rem;
-        font-weight: 800;
-        color: #8AB4F8; /* 밝은 청색 계열 */
+        font-size: 1.9rem !important;
+        font-weight: 800 !important;
+        color: #8AB4F8 !important;
+        -webkit-text-fill-color: #8AB4F8 !important;
         margin-bottom: 0.2rem;
-        text-align: center;
+        text-align: center !important;
     }
     .sub-title {
         font-size: 0.95rem;
