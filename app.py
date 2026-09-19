@@ -37,8 +37,13 @@ st.set_page_config(
 # 커스텀 CSS 스타일 정의 (어두운 테마 가독성 극대화 및 스타일링)
 st.markdown("""
 <style>
+    .main .block-container,
+    [data-testid="stMainBlockContainer"],
+    .block-container {
+        padding-top: 2.0rem !important;
+    }
     .main-title {
-        font-size: 1.9rem !important;
+        font-size: 2.0rem !important;
         font-weight: 800 !important;
         color: #8AB4F8 !important;
         -webkit-text-fill-color: #8AB4F8 !important;
@@ -953,3 +958,6 @@ with tab2:
                 st.warning("🌀 **VCP 조건 종합 판정:** **미흡(Fail)**. 3단계 진폭 순차적 수축 요건(Amp3 > Amp2 > Amp1)을 충족하지 못했거나, 거래량 Dry-up 혹은 가격이 돌파 임박 지점(최근 20일 최고가의 설정한 비율 이상)이 아닙니다.")
         else:
             st.error(f"티커 '{manual_ticker}'에 대한 데이터를 불러올 수 없습니다. 티커명을 다시 확인해 주세요.")
+
+st.markdown("---")
+st.markdown("<div style='text-align: center; color: #64748b; font-size: 0.8rem; margin-top: 8px; margin-bottom: 24px; line-height: 1.6;'>⚠️ 본 서비스에서 제공하는 모든 정보는 투자 참고용이며, 투자의 최종 결정과 책임은 투자자 본인에게 있습니다.</div>", unsafe_allow_html=True)
