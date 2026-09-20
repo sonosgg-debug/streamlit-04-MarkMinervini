@@ -1,4 +1,5 @@
 import pandas as pd
+import requests
 import FinanceDataReader as fdr
 import yfinance as yf
 from tqdm import tqdm
@@ -30,7 +31,7 @@ def get_stock_list(market_code: str) -> pd.DataFrame:
     - KS: KOSPI
     - KQ: KOSDAQ
     - SP: S&P 500
-    - NQ: NASDAQ
+    - NQ: NASDAQ 100
     """
     print(f"Fetching stock list for market: {market_code}...")
     
@@ -57,9 +58,22 @@ def get_stock_list(market_code: str) -> pd.DataFrame:
         df['ticker'] = df['Symbol'].str.replace('.', '-', regex=False)
         df['name'] = df['Name']
     elif market_code == 'NQ':
-        df = fdr.StockListing('NASDAQ')
-        df['ticker'] = df['Symbol'].str.replace('.', '-', regex=False)
-        df['name'] = df['Name']
+        # NASDAQ 100 지수 구성 종목 수집 (Wikipedia 기준 ~101개 종목)
+        nasdaq_url = "https://en.wikipedia.org/wiki/List_of_NASDAQ-100_companies"
+        headers = {"User-Agent": "Mozilla/5.0"}
+        response = requests.get(nasdaq_url, headers=headers, timeout=15)
+        dfs = pd.read_html(io.StringIO(response.text))
+        df_result = None
+        for d in dfs:
+            if 'Ticker' in d.columns and 'Company' in d.columns:
+                df_result = pd.DataFrame()
+                df_result['name'] = d['Company']
+                df_result['ticker'] = d['Ticker'].astype(str).str.replace('.', '-', regex=False)
+                break
+        if df_result is not None and not df_result.empty:
+            df = df_result
+        else:
+            raise ValueError("NASDAQ 100 table not found in Wikipedia page.")
     else:
         raise ValueError(f"Invalid market code: {market_code}. Choose from 'KS', 'KQ', 'SP', 'NQ'.")
         

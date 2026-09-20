@@ -5,3 +5,4 @@ numpy
 plotly
 openpyxl
 finance-datareader
+requests

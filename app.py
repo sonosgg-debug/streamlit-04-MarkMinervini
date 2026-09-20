@@ -252,7 +252,7 @@ st.sidebar.header("⚙️ 스크리닝 조건 설정")
 
 market_choice = st.sidebar.selectbox(
     "대상 시장 선택",
-    ["코스피 (KOSPI)", "코스닥 (KOSDAQ)", "미국 S&P 500", "미국 NASDAQ"],
+    ["코스피 (KOSPI)", "코스닥 (KOSDAQ)", "미국 S&P 500 (US)", "미국 NASDAQ 100 (US)"],
     index=0
 )
 
@@ -328,8 +328,8 @@ if start_screening:
     market_map = {
         "코스피 (KOSPI)": "KS",
         "코스닥 (KOSDAQ)": "KQ",
-        "미국 S&P 500": "SP",
-        "미국 NASDAQ": "NQ"
+        "미국 S&P 500 (US)": "SP",
+        "미국 NASDAQ 100 (US)": "NQ"
     }
     market_code = market_map[market_choice]
     
@@ -522,8 +522,8 @@ with tab1:
             market_code_map = {
                 "코스피 (KOSPI)": "KS",
                 "코스닥 (KOSDAQ)": "KQ",
-                "미국 S&P 500": "SP",
-                "미국 NASDAQ": "NQ"
+                "미국 S&P 500 (US)": "SP",
+                "미국 NASDAQ 100 (US)": "NQ"
             }
             market_suffix = market_code_map.get(st.session_state.market_type_used, "ALL")
             today_str = datetime.datetime.now(KST).strftime('%Y-%m-%d')
