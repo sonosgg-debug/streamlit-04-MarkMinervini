@@ -94,21 +94,49 @@ st.markdown("""
         font-size: 0.9rem !important;
         line-height: 1.6;
     }
-    /* 엑셀 다운로드 버튼 우측 정렬 */
-    .stDownloadButton,
-    .st-key-excel_download_container {
-        display: flex;
-        justify-content: flex-end;
-        align-items: center;
+    /* 다운로드 버튼 공통 통일 스타일 */
+    div[data-testid="stDownloadButton"] > button,
+    .stDownloadButton > button {
+        background-color: #334155 !important;
+        color: #f8fafc !important;
+        border: 1px solid #475569 !important;
+        border-radius: 6px !important;
+        font-size: 0.875rem !important;
+        font-weight: 500 !important;
+        height: 38px !important;
+        min-height: 38px !important;
+        max-height: 38px !important;
+        line-height: 36px !important;
+        padding: 0 16px !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        text-align: center !important;
+        transition: all 0.2s ease-in-out !important;
+        box-sizing: border-box !important;
     }
-    .stDownloadButton button,
-    .st-key-excel_download_container [data-testid="stDownloadButton"] {
-        display: flex;
-        justify-content: flex-end;
-        margin-left: auto;
+    div[data-testid="stDownloadButton"] > button:hover,
+    .stDownloadButton > button:hover {
+        background-color: #475569 !important;
+        border-color: #38bdf8 !important;
+        color: #ffffff !important;
+        box-shadow: 0 0 10px rgba(56, 189, 248, 0.25) !important;
     }
-    .st-key-excel_download_container [data-testid="stDownloadButton"] button {
-        margin-left: auto;
+    div[data-testid="stDownloadButton"] > button:active,
+    .stDownloadButton > button:active {
+        background-color: #1e293b !important;
+        border-color: #0284c7 !important;
+    }
+    div[data-testid="stDownloadButton"] > button p,
+    div[data-testid="stDownloadButton"] > button span,
+    .stDownloadButton > button p,
+    .stDownloadButton > button span {
+        font-size: 0.875rem !important;
+        font-weight: 500 !important;
+        color: inherit !important;
+        line-height: inherit !important;
+        margin: 0 !important;
+        padding: 0 !important;
     }
 
     /* =========================================================
@@ -531,18 +559,17 @@ with tab1:
             excel_filename = f"MarkMinerviniMTT-{market_suffix}{vcp_suffix}-{today_str}.xlsx"
 
             # --- 결과 타이틀 및 엑셀 다운로드 버튼 (동일 라인 우측 끝 정렬) ---
-            col_title, col_btn = st.columns([0.75, 0.25], vertical_alignment="center")
+            col_title, col_btn = st.columns([8, 2], vertical_alignment="bottom")
             with col_title:
                 st.markdown(f'#### <span style="color: #8AB4F8;">스크리닝 결과 (총 {len(st.session_state.screened_df)}개 종목)</span>', unsafe_allow_html=True)
             with col_btn:
-                with st.container(key="excel_download_container", horizontal=True, horizontal_alignment="right"):
-                    st.download_button(
-                        label="📥 엑셀 파일 다운로드",
-                        data=excel_data,
-                        file_name=excel_filename,
-                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                        use_container_width=False
-                    )
+                st.download_button(
+                    label="📥 엑셀 파일 다운로드",
+                    data=excel_data,
+                    file_name=excel_filename,
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    use_container_width=True
+                )
             
             # 대시보드 화면용 테이블 포맷팅 가공
             df_display = st.session_state.screened_df.copy()
