@@ -755,12 +755,30 @@ with tab1:
                     )
                     
                     fig.update_layout(
+                        template="plotly_dark",
+                        paper_bgcolor="#1E293B",
+                        plot_bgcolor="#0F172A",
                         height=600,
-                        title_text=f"{selected_stock_name} ({selected_ticker}) 주가 & 거래량 분석",
+                        title=dict(
+                            text=f"<b>{selected_stock_name} ({selected_ticker}) 주가 & 거래량 분석</b>",
+                            font=dict(color="#F8FAFC", size=16)
+                        ),
                         hovermode="x unified",
                         xaxis_rangeslider_visible=False,
-                        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+                        legend=dict(
+                            orientation="h",
+                            yanchor="bottom",
+                            y=1.02,
+                            xanchor="right",
+                            x=1,
+                            bgcolor="rgba(30, 41, 59, 0.85)",
+                            bordercolor="#334155",
+                            borderwidth=1,
+                            font=dict(color="#F8FAFC", size=11)
+                        )
                     )
+                    fig.update_xaxes(gridcolor="#334155", linecolor="#475569", tickfont=dict(color="#cbd5e1"))
+                    fig.update_yaxes(gridcolor="#334155", linecolor="#475569", tickfont=dict(color="#cbd5e1"))
                     
                     # 주말 및 공휴일 공백 제거 (5일 주기 끊김 및 0값 방지)
                     dt_all = pd.date_range(start=df_chart.index[0], end=df_chart.index[-1], freq='B')
@@ -911,12 +929,30 @@ with tab2:
             fig_m.add_trace(go.Scatter(x=df_m.index, y=df_m['Vol_SMA_20'], line=dict(color='#8AB4F8', width=1), name="거래량 20MA"), row=2, col=1)
             
             fig_m.update_layout(
+                template="plotly_dark",
+                paper_bgcolor="#1E293B",
+                plot_bgcolor="#0F172A",
                 height=600,
-                title_text=f"{manual_ticker} 주가 & 거래량 분석 (관심 종목)",
+                title=dict(
+                    text=f"<b>{manual_ticker} 주가 & 거래량 분석 (관심 종목)</b>",
+                    font=dict(color="#F8FAFC", size=16)
+                ),
                 hovermode="x unified",
                 xaxis_rangeslider_visible=False,
-                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+                legend=dict(
+                    orientation="h",
+                    yanchor="bottom",
+                    y=1.02,
+                    xanchor="right",
+                    x=1,
+                    bgcolor="rgba(30, 41, 59, 0.85)",
+                    bordercolor="#334155",
+                    borderwidth=1,
+                    font=dict(color="#F8FAFC", size=11)
+                )
             )
+            fig_m.update_xaxes(gridcolor="#334155", linecolor="#475569", tickfont=dict(color="#cbd5e1"))
+            fig_m.update_yaxes(gridcolor="#334155", linecolor="#475569", tickfont=dict(color="#cbd5e1"))
             
             # 주말 및 공휴일 공백 제거 (5일 주기 끊김 및 0값 방지)
             dt_all_m = pd.date_range(start=df_m.index[0], end=df_m.index[-1], freq='B')
