@@ -276,80 +276,84 @@ if 'rs_ratings' not in st.session_state:
     st.session_state.rs_ratings = {}
 
 # 사이드바: 스크리닝 파라미터 구성
-st.sidebar.header("⚙️ 스크리닝 조건 설정")
+with st.sidebar:
+    st.header("⚙️ 스크리닝 조건 설정")
 
-market_choice = st.sidebar.selectbox(
-    "대상 시장 선택",
-    ["코스피 (KOSPI)", "코스닥 (KOSDAQ)", "미국 S&P 500 (US)", "미국 NASDAQ 100 (US)"],
-    index=0
-)
-
-rs_rating_thresh = st.sidebar.slider(
-    "최소 상대 강도 (RS Rating)",
-    min_value=50,
-    max_value=99,
-    value=70,
-    step=1,
-    help="전체 상장 종목 중 최근 1년 수익률 상위 백분위수 조건입니다. 미너비니 기본 요건은 70 이상(추천은 80~90 이상)입니다."
-)
-
-apply_vcp = st.sidebar.toggle(
-    "변동성 수축 패턴(VCP) 필터 적용",
-    value=True,
-    help="체크하면 3단계 점진적 진폭 수축 및 거래량 감소, 돌파 임박 등의 VCP 요건을 필터링에 반영합니다."
-)
-
-with st.sidebar.expander("🌀 VCP 상세 조건 설정", expanded=apply_vcp):
-    vcp_amp_limit = st.slider(
-        "마지막 단계 최대 진폭 (Amp1)",
-        min_value=3.0,
-        max_value=20.0,
-        value=10.0,
-        step=0.5,
-        format="%f%%",
-        help="최근 10일간 최고가와 최저가 간의 최대 진폭 허용치입니다. 작을수록 단단히 밀착되어 수축한 상태를 의미합니다."
-    ) / 100.0
-    
-    vol_dryup_ratio = st.slider(
-        "거래량 메마름(Dry-up) 비율",
-        min_value=50.0,
-        max_value=100.0,
-        value=80.0,
-        step=5.0,
-        format="%f%%",
-        help="최근 5일 평균 거래량이 30일 평균 거래량 대비 몇 % 이하로 말라붙어야 하는지 설정합니다."
-    ) / 100.0
-    
-    breakout_pct = st.slider(
-        "돌파 임박 가격 비율",
-        min_value=85.0,
-        max_value=100.0,
-        value=95.0,
-        step=1.0,
-        format="%f%%",
-        help="현재 주가가 최근 20일간 최고가 대비 몇 % 영역 이상에 도달하여 전고점 돌파 직전이어야 하는지 결정합니다."
-    ) / 100.0
-
-with st.sidebar.expander("🛠️ 시스템 & 성능 설정", expanded=False):
-    limit_tickers = st.number_input(
-        "테스트용 종목 개수 제한 (0 = 제한 없음)",
-        min_value=0,
-        max_value=5000,
-        value=0,
-        step=50,
-        help="빠른 테스트를 위해 대상 시장의 상위 N개 티커만 임포트하고 분석하려면 설정하세요."
-    )
-    
-    chunk_size = st.number_input(
-        "API 다운로드 청크 크기",
-        min_value=10,
-        max_value=500,
-        value=150,
-        step=50,
-        help="yfinance API로 한 번에 배치 다운로드 요청을 보낼 종목 개수입니다. 안정적인 연결을 위해 150 전후를 추천합니다."
+    market_choice = st.selectbox(
+        "대상 시장 선택",
+        ["코스피 (KOSPI)", "코스닥 (KOSDAQ)", "미국 S&P 500 (US)", "미국 NASDAQ 100 (US)"],
+        index=0
     )
 
-start_screening = st.sidebar.button("🔍 스크리닝 시작", type="primary", use_container_width=True)
+    st.markdown("---")
+    st.subheader("🎯 미너비니 추세 필터")
+
+    rs_rating_thresh = st.slider(
+        "최소 상대 강도 (RS Rating)",
+        min_value=50,
+        max_value=99,
+        value=70,
+        step=1,
+        help="전체 상장 종목 중 최근 1년 수익률 상위 백분위수 조건입니다. 미너비니 기본 요건은 70 이상(추천은 80~90 이상)입니다."
+    )
+
+    apply_vcp = st.toggle(
+        "변동성 수축 패턴(VCP) 필터 적용",
+        value=True,
+        help="체크하면 3단계 점진적 진폭 수축 및 거래량 감소, 돌파 임박 등의 VCP 요건을 필터링에 반영합니다."
+    )
+
+    with st.expander("🌀 VCP 상세 조건 설정", expanded=apply_vcp):
+        vcp_amp_limit = st.slider(
+            "마지막 단계 최대 진폭 (Amp1)",
+            min_value=3.0,
+            max_value=20.0,
+            value=10.0,
+            step=0.5,
+            format="%f%%",
+            help="최근 10일간 최고가와 최저가 간의 최대 진폭 허용치입니다. 작을수록 단단히 밀착되어 수축한 상태를 의미합니다."
+        ) / 100.0
+        
+        vol_dryup_ratio = st.slider(
+            "거래량 메마름(Dry-up) 비율",
+            min_value=50.0,
+            max_value=100.0,
+            value=80.0,
+            step=5.0,
+            format="%f%%",
+            help="최근 5일 평균 거래량이 30일 평균 거래량 대비 몇 % 이하로 말라붙어야 하는지 설정합니다."
+        ) / 100.0
+        
+        breakout_pct = st.slider(
+            "돌파 임박 가격 비율",
+            min_value=85.0,
+            max_value=100.0,
+            value=95.0,
+            step=1.0,
+            format="%f%%",
+            help="현재 주가가 최근 20일간 최고가 대비 몇 % 영역 이상에 도달하여 전고점 돌파 직전이어야 하는지 결정합니다."
+        ) / 100.0
+
+    with st.expander("🛠️ 시스템 & 성능 설정", expanded=False):
+        limit_tickers = st.number_input(
+            "테스트용 종목 개수 제한 (0 = 제한 없음)",
+            min_value=0,
+            max_value=5000,
+            value=0,
+            step=50,
+            help="빠른 테스트를 위해 대상 시장의 상위 N개 티커만 임포트하고 분석하려면 설정하세요."
+        )
+        
+        chunk_size = st.number_input(
+            "API 다운로드 청크 크기",
+            min_value=10,
+            max_value=500,
+            value=150,
+            step=50,
+            help="yfinance API로 한 번에 배치 다운로드 요청을 보낼 종목 개수입니다. 안정적인 연결을 위해 150 전후를 추천합니다."
+        )
+
+    start_screening = st.button("🔍 스크리닝 시작", type="primary", use_container_width=True)
 
 # ----------------- 스크리닝 비즈니스 로직 구동 -----------------
 if start_screening:
