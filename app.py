@@ -280,8 +280,8 @@ with st.sidebar:
     st.header("⚙️ 스크리닝 조건 설정")
 
     market_choice = st.selectbox(
-        "대상 시장 선택",
-        ["코스피 (KOSPI)", "코스닥 (KOSDAQ)", "미국 S&P 500 (US)", "미국 NASDAQ 100 (US)"],
+        "🏛️ 시장 선택",
+        ["KOSPI", "KOSDAQ", "S&P 500", "NASDAQ"],
         index=0
     )
 
@@ -358,12 +358,17 @@ with st.sidebar:
 # ----------------- 스크리닝 비즈니스 로직 구동 -----------------
 if start_screening:
     market_map = {
+        "KOSPI": "KS",
+        "KOSDAQ": "KQ",
+        "S&P 500": "SP",
+        "NASDAQ": "NQ",
+        # 하위 호환 매핑
         "코스피 (KOSPI)": "KS",
         "코스닥 (KOSDAQ)": "KQ",
         "미국 S&P 500 (US)": "SP",
         "미국 NASDAQ 100 (US)": "NQ"
     }
-    market_code = market_map[market_choice]
+    market_code = market_map.get(market_choice, "KS")
     
     # 1. 상장 종목 목록 가져오기
     with st.spinner("상장 종목 목록을 가져오는 중..."):
