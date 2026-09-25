@@ -1,6 +1,3 @@
-import socket
-socket.setdefaulttimeout(5.0)
-
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -20,6 +17,18 @@ from plotly.subplots import make_subplots
 # 로컬 모듈 임포트
 from data_loader import get_stock_list, download_prices_chunked
 from screener import run_screener, check_vcp_pattern, check_trend_template, calculate_returns, calculate_rs_ratings
+
+# 단일 종목 주가 데이터 캐시 로더 (타임아웃 15초 및 자동 캐싱으로 재부팅 시 무한 대기 방지)
+@st.cache_data(ttl=3600, show_spinner=False)
+def load_single_stock_history(ticker: str) -> pd.DataFrame:
+    try:
+        df = yf.download(ticker, period="2y", progress=False, timeout=15)
+        if isinstance(df.columns, pd.MultiIndex):
+            df.columns = df.columns.droplevel(1)
+        df = df.dropna(subset=['Close', 'High', 'Low', 'Volume'])
+        return df
+    except Exception:
+        return pd.DataFrame()
 
 STANDARD_CHART_THEME = {
     'paper_bgcolor': '#1E293B',    # Tailwind Slate-800 (외곽 카드 배경)
@@ -310,6 +319,8 @@ if 'vcp_applied' not in st.session_state:
     st.session_state.vcp_applied = None
 if 'rs_ratings' not in st.session_state:
     st.session_state.rs_ratings = {}
+if 'current_analyzed_ticker' not in st.session_state:
+    st.session_state.current_analyzed_ticker = None
 
 # 사이드바: 스크리닝 파라미터 구성
 with st.sidebar:
@@ -464,7 +475,8 @@ if start_screening:
                         group_by="ticker", 
                         auto_adjust=True, 
                         threads=True,
-                        progress=False
+                        progress=False,
+                        timeout=20
                     )
                 if not df_chunk.empty:
                     all_data.append(df_chunk)
@@ -680,12 +692,9 @@ with tab1:
                 
                 st.markdown(f"#### 🔍 {selected_stock_name} ({selected_ticker}) 차트 상세 분석")
                 
-                # 주가 데이터 다운로드 (차트는 깔끔한 이평 조회를 위해 2년 정보 취득)
+                # 주가 데이터 다운로드 (차트는 깔끔한 이평 조회를 위해 2년 정보 취득 및 캐싱)
                 with st.spinner(f"주가 이력 로드 중... ({selected_ticker})"):
-                    df_chart = yf.download(selected_ticker, period="2y", progress=False)
-                    if isinstance(df_chart.columns, pd.MultiIndex):
-                        df_chart.columns = df_chart.columns.droplevel(1)
-                    df_chart = df_chart.dropna(subset=['Close', 'High', 'Low', 'Volume'])
+                    df_chart = load_single_stock_history(selected_ticker)
                 
                 if not df_chart.empty:
                     # 보조 지표 계산
@@ -839,11 +848,36 @@ with tab1:
                         row=2, col=1
                     )
                     
+                    # 우측 Y축(y3, y4) 활성화를 위한 투명 더미 트레이스
+                    fig.add_trace(
+                        go.Scatter(
+                            x=[df_chart.index[0]],
+                            y=[df_chart['Close'].iloc[0]],
+                            yaxis='y3',
+                            showlegend=False,
+                            hoverinfo='skip',
+                            mode='markers',
+                            marker=dict(opacity=0)
+                        )
+                    )
+                    fig.add_trace(
+                        go.Scatter(
+                            x=[df_chart.index[0]],
+                            y=[df_chart['Volume'].iloc[0]],
+                            yaxis='y4',
+                            showlegend=False,
+                            hoverinfo='skip',
+                            mode='markers',
+                            marker=dict(opacity=0)
+                        )
+                    )
+                    
                     fig.update_layout(
                         template="plotly_dark",
                         paper_bgcolor=STANDARD_CHART_THEME['paper_bgcolor'],
                         plot_bgcolor=STANDARD_CHART_THEME['plot_bgcolor'],
                         height=600,
+                        margin=dict(l=65, r=70, t=50, b=40),
                         title=dict(
                             text=f"<b>{selected_stock_name} ({selected_ticker}) 주가 & 거래량 분석</b>",
                             font=dict(color="#F8FAFC", size=16)
@@ -865,13 +899,19 @@ with tab1:
                             showline=True,
                             linecolor="#475569",
                             gridcolor="#334155",
-                            tickfont=dict(color="#cbd5e1")
+                            tickfont=dict(color="#cbd5e1", size=11),
+                            ticks="outside",
+                            ticklen=5,
+                            tickcolor="#475569"
                         ),
                         yaxis2=dict(
                             showline=True,
                             linecolor="#475569",
                             gridcolor="#334155",
-                            tickfont=dict(color="#cbd5e1")
+                            tickfont=dict(color="#cbd5e1", size=11),
+                            ticks="outside",
+                            ticklen=5,
+                            tickcolor="#475569"
                         ),
                         yaxis3=dict(
                             overlaying="y",
@@ -880,7 +920,13 @@ with tab1:
                             showgrid=False,
                             showline=True,
                             linecolor="#475569",
-                            tickfont=dict(color="#cbd5e1")
+                            linewidth=1.5,
+                            tickfont=dict(color="#cbd5e1", size=11),
+                            ticks="outside",
+                            ticklen=5,
+                            tickwidth=1.5,
+                            tickcolor="#475569",
+                            showticklabels=True
                         ),
                         yaxis4=dict(
                             overlaying="y2",
@@ -889,7 +935,13 @@ with tab1:
                             showgrid=False,
                             showline=True,
                             linecolor="#475569",
-                            tickfont=dict(color="#cbd5e1")
+                            linewidth=1.5,
+                            tickfont=dict(color="#cbd5e1", size=11),
+                            ticks="outside",
+                            ticklen=5,
+                            tickwidth=1.5,
+                            tickcolor="#475569",
+                            showticklabels=True
                         )
                     )
                     fig.update_xaxes(gridcolor="#334155", linecolor="#475569", tickfont=dict(color="#cbd5e1"), showline=True, mirror=True)
@@ -937,15 +989,22 @@ with tab2:
     # 한국 및 미국 샘플 예시 가이드
     st.info("💡 **티커 입력 예시:**\n- 한국 코스피: `005930.KS` (삼성전자) | 코스닥: `247540.KQ` (에코프로비엠)\n- 미국 주식: `AAPL` (애플), `NVDA` (엔비디아), `TSLA` (테슬라)")
     
-    manual_ticker = st.text_input("분석할 종목의 티커를 입력하세요:", value="NVDA").strip().upper()
-    
-    if manual_ticker:
+    col_input, col_btn = st.columns([3, 1])
+    with col_input:
+        input_ticker = st.text_input("분석할 종목의 티커를 입력하세요:", value="NVDA", key="manual_ticker_input").strip().upper()
+    with col_btn:
+        st.write("")
+        st.write("")
+        btn_manual_search = st.button("🔬 분석 실행", type="primary", use_container_width=True)
+
+    if btn_manual_search:
+        st.session_state.current_analyzed_ticker = input_ticker
+
+    if st.session_state.current_analyzed_ticker:
+        manual_ticker = st.session_state.current_analyzed_ticker
         with st.spinner(f"관심 종목 {manual_ticker} 분석 중..."):
-            # 차트/분석을 위해 2년 데이터 획득
-            df_m = yf.download(manual_ticker, period="2y", progress=False)
-            if isinstance(df_m.columns, pd.MultiIndex):
-                df_m.columns = df_m.columns.droplevel(1)
-            df_m = df_m.dropna(subset=['Close', 'High', 'Low', 'Volume'])
+            # 차트/분석을 위해 2년 데이터 획득 (캐시 적용)
+            df_m = load_single_stock_history(manual_ticker)
             
         if not df_m.empty:
             df_m['SMA_50'] = df_m['Close'].rolling(window=50).mean()
@@ -1066,11 +1125,36 @@ with tab2:
             fig_m.add_trace(go.Bar(x=df_m.index, y=df_m['Volume'], marker_color=v_colors, name="거래량"), row=2, col=1)
             fig_m.add_trace(go.Scatter(x=df_m.index, y=df_m['Vol_SMA_20'], line=dict(color='#8AB4F8', width=1), name="거래량 20MA"), row=2, col=1)
             
+            # 우측 Y축(y3, y4) 활성화를 위한 투명 더미 트레이스
+            fig_m.add_trace(
+                go.Scatter(
+                    x=[df_m.index[0]],
+                    y=[df_m['Close'].iloc[0]],
+                    yaxis='y3',
+                    showlegend=False,
+                    hoverinfo='skip',
+                    mode='markers',
+                    marker=dict(opacity=0)
+                )
+            )
+            fig_m.add_trace(
+                go.Scatter(
+                    x=[df_m.index[0]],
+                    y=[df_m['Volume'].iloc[0]],
+                    yaxis='y4',
+                    showlegend=False,
+                    hoverinfo='skip',
+                    mode='markers',
+                    marker=dict(opacity=0)
+                )
+            )
+            
             fig_m.update_layout(
                 template="plotly_dark",
                 paper_bgcolor=STANDARD_CHART_THEME['paper_bgcolor'],
                 plot_bgcolor=STANDARD_CHART_THEME['plot_bgcolor'],
                 height=600,
+                margin=dict(l=65, r=70, t=50, b=40),
                 title=dict(
                     text=f"<b>{manual_ticker} 주가 & 거래량 분석 (관심 종목)</b>",
                     font=dict(color="#F8FAFC", size=16)
@@ -1092,13 +1176,19 @@ with tab2:
                     showline=True,
                     linecolor="#475569",
                     gridcolor="#334155",
-                    tickfont=dict(color="#cbd5e1")
+                    tickfont=dict(color="#cbd5e1", size=11),
+                    ticks="outside",
+                    ticklen=5,
+                    tickcolor="#475569"
                 ),
                 yaxis2=dict(
                     showline=True,
                     linecolor="#475569",
                     gridcolor="#334155",
-                    tickfont=dict(color="#cbd5e1")
+                    tickfont=dict(color="#cbd5e1", size=11),
+                    ticks="outside",
+                    ticklen=5,
+                    tickcolor="#475569"
                 ),
                 yaxis3=dict(
                     overlaying="y",
@@ -1107,7 +1197,13 @@ with tab2:
                     showgrid=False,
                     showline=True,
                     linecolor="#475569",
-                    tickfont=dict(color="#cbd5e1")
+                    linewidth=1.5,
+                    tickfont=dict(color="#cbd5e1", size=11),
+                    ticks="outside",
+                    ticklen=5,
+                    tickwidth=1.5,
+                    tickcolor="#475569",
+                    showticklabels=True
                 ),
                 yaxis4=dict(
                     overlaying="y2",
@@ -1116,7 +1212,13 @@ with tab2:
                     showgrid=False,
                     showline=True,
                     linecolor="#475569",
-                    tickfont=dict(color="#cbd5e1")
+                    linewidth=1.5,
+                    tickfont=dict(color="#cbd5e1", size=11),
+                    ticks="outside",
+                    ticklen=5,
+                    tickwidth=1.5,
+                    tickcolor="#475569",
+                    showticklabels=True
                 )
             )
             fig_m.update_xaxes(gridcolor="#334155", linecolor="#475569", tickfont=dict(color="#cbd5e1"), showline=True, mirror=True)
@@ -1138,7 +1240,7 @@ with tab2:
             def get_status_str(cond):
                 if cond is None:
                     return "⚪ 판정 불가 (RS 데이터 누락)"
-                return "🟢 충족 (Pass)" if cond else "🔴 미협 (Fail)"
+                return "🟢 충족 (Pass)" if cond else "🔴 미흡 (Fail)"
                 
             with st.container(key="manual_diagnosis_container"):
                 col_m1, col_m2 = st.columns(2)
@@ -1161,6 +1263,8 @@ with tab2:
                 st.warning("🌀 **VCP 조건 종합 판정:** **미흡(Fail)**. 3단계 진폭 순차적 수축 요건(Amp3 > Amp2 > Amp1)을 충족하지 못했거나, 거래량 Dry-up 혹은 가격이 돌파 임박 지점(최근 20일 최고가의 설정한 비율 이상)이 아닙니다.")
         else:
             st.error(f"티커 '{manual_ticker}'에 대한 데이터를 불러올 수 없습니다. 티커명을 다시 확인해 주세요.")
+    else:
+        st.info("💡 상단 입력창에서 분석할 티커를 확인하신 후 **'🔬 분석 실행'** 버튼을 클릭해 주세요.", icon="👆")
 
 st.markdown("---")
 st.markdown("<div style='text-align: center; color: #64748b; font-size: 0.8rem; margin-top: 8px; margin-bottom: 24px; line-height: 1.6;'>⚠️ 본 서비스에서 제공하는 모든 정보는 투자 참고용이며, 투자의 최종 결정과 책임은 투자자 본인에게 있습니다.</div>", unsafe_allow_html=True)

@@ -100,7 +100,8 @@ def download_prices_chunked(tickers: list, chunk_size: int = 150) -> pd.DataFram
                     group_by="ticker", 
                     auto_adjust=True, 
                     threads=True,
-                    progress=False
+                    progress=False,
+                    timeout=20
                 )
             
             if not df_chunk.empty:
