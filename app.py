@@ -139,6 +139,18 @@ st.markdown("""
         padding: 0 !important;
     }
 
+    /* 사이드바 스타일링 */
+    section[data-testid="stSidebar"], [data-testid="stSidebar"] {
+        background-color: #1e293b !important;
+        border-right: 1px solid #334155 !important;
+    }
+    section[data-testid="stSidebar"] h1,
+    section[data-testid="stSidebar"] h2,
+    section[data-testid="stSidebar"] h3 {
+        color: #f8fafc !important;
+        -webkit-text-fill-color: #f8fafc !important;
+    }
+
     /* =========================================================
        사이드바 접기(<<) 및 펼치기(>>) 버튼 항상 표시 및 시인성/대비 강화
        ========================================================= */
@@ -277,7 +289,20 @@ if 'rs_ratings' not in st.session_state:
 
 # 사이드바: 스크리닝 파라미터 구성
 with st.sidebar:
-    st.header("⚙️ 스크리닝 조건 설정")
+    st.markdown(
+        """
+        <div style='padding: 2px 0 12px 0;'>
+            <div style='font-size: 1.25rem; font-weight: 700; color: #f8fafc; letter-spacing: -0.01em; display: flex; align-items: center; gap: 8px;'>
+                <span>⚙️</span> 스크리닝 조건 설정
+            </div>
+            <div style='font-size: 0.82rem; color: #94a3b8; margin-top: 4px; line-height: 1.4;'>
+                마크 미너비니 추세 템플릿(MTT) 필터 조건을 설정합니다.
+            </div>
+        </div>
+        <hr style='border: 0; height: 1px; background-color: #334155; margin: 10px 0 16px 0;'>
+        """,
+        unsafe_allow_html=True
+    )
 
     market_choice = st.selectbox(
         "🏛️ 시장 선택",
@@ -285,7 +310,7 @@ with st.sidebar:
         index=0
     )
 
-    st.markdown("---")
+    st.markdown("<hr style='border: 0; height: 1px; background-color: #334155; margin: 16px 0;'>", unsafe_allow_html=True)
     st.subheader("🎯 미너비니 추세 필터")
 
     rs_rating_thresh = st.slider(
