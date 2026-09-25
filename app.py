@@ -631,7 +631,12 @@ with tab1:
             # --- 결과 타이틀 및 엑셀 다운로드 버튼 (동일 라인 우측 끝 정렬) ---
             col_title, col_btn = st.columns([8, 2], vertical_alignment="bottom")
             with col_title:
-                st.markdown(f'#### <span style="color: #8AB4F8;">스크리닝 결과 (총 {len(st.session_state.screened_df)}개 종목)</span>', unsafe_allow_html=True)
+                st.markdown(
+                    f"<div style='font-size: 1.20rem; font-weight: 700; color: #8AB4F8; margin: 10px 0 6px 0; display: flex; align-items: center; gap: 8px;'>"
+                    f"<span>📋</span> 스크리닝 결과 (총 {len(st.session_state.screened_df)}개 종목)"
+                    f"</div>",
+                    unsafe_allow_html=True
+                )
             with col_btn:
                 st.download_button(
                     label="📥 엑셀 파일 다운로드",
@@ -679,7 +684,12 @@ with tab1:
             
             # --- 개별 종목 차트 시각화 구역 ---
             st.markdown("---")
-            st.markdown('#### <span style="color: #8AB4F8;">포착 종목 변동성 수축(VCP) 및 추세 시각화 차트</span>', unsafe_allow_html=True)
+            st.markdown(
+                "<div style='font-size: 1.20rem; font-weight: 700; color: #8AB4F8; margin: 20px 0 10px 0; display: flex; align-items: center; gap: 8px;'>"
+                "<span>📈</span> 포착 종목 변동성 수축(VCP) 및 추세 시각화 차트"
+                "</div>",
+                unsafe_allow_html=True
+            )
             
             selected_stock_name = st.selectbox(
                 "차트로 분석할 종목을 포착 리스트에서 선택하세요:",
@@ -690,7 +700,12 @@ with tab1:
                 row = st.session_state.screened_df[st.session_state.screened_df['Name'] == selected_stock_name].iloc[0]
                 selected_ticker = row['Ticker']
                 
-                st.markdown(f"#### 🔍 {selected_stock_name} ({selected_ticker}) 차트 상세 분석")
+                st.markdown(
+                    f"<div style='font-size: 1.00rem; font-weight: 600; color: #E2E8F0; margin: 14px 0 6px 0; display: flex; align-items: center; gap: 6px;'>"
+                    f"<span>🔍</span> {selected_stock_name} ({selected_ticker}) 차트 상세 분석"
+                    f"</div>",
+                    unsafe_allow_html=True
+                )
                 
                 # 주가 데이터 다운로드 (차트는 깔끔한 이평 조회를 위해 2년 정보 취득 및 캐싱)
                 with st.spinner(f"주가 이력 로드 중... ({selected_ticker})"):
@@ -958,7 +973,12 @@ with tab1:
                     st.plotly_chart(fig, use_container_width=True)
                     
                     # --- 규칙 진단 결과 카드 레이아웃 ---
-                    st.markdown("##### 🔍 미너비니의 규칙 자가진단표")
+                    st.markdown(
+                        "<div style='font-size: 1.00rem; font-weight: 600; color: #E2E8F0; margin: 14px 0 6px 0; display: flex; align-items: center; gap: 6px;'>"
+                        "<span>🔍</span> 미너비니의 규칙 자가진단표"
+                        "</div>",
+                        unsafe_allow_html=True
+                    )
                     
                     def get_status_str(cond):
                         return "🟢 충족 (Pass)" if cond else "🔴 미흡 (Fail)"
@@ -983,7 +1003,12 @@ with tab1:
 
 # ----------------- 탭 2: 개별 관심 종목 수동 분석기 -----------------
 with tab2:
-    st.markdown('#### <span style="color: #8AB4F8;">개별 관심 종목 분석기 (수동 조회)</span>', unsafe_allow_html=True)
+    st.markdown(
+        "<div style='font-size: 1.20rem; font-weight: 700; color: #8AB4F8; margin: 14px 0 8px 0; display: flex; align-items: center; gap: 8px;'>"
+        "<span>🔍</span> 개별 관심 종목 분석기 (수동 조회)"
+        "</div>",
+        unsafe_allow_html=True
+    )
     st.markdown("스크리닝을 거치지 않더라도, 조회하고자 하는 개별 종목 티커를 입력하여 미너비니의 **상승 추세 조건 충족 상황**과 **최근 60일간 변동성(VCP) 수축 모습**을 상세 진단할 수 있습니다.")
     
     # 한국 및 미국 샘플 예시 가이드
@@ -1235,7 +1260,12 @@ with tab2:
             st.plotly_chart(fig_m, use_container_width=True)
             
             # 2. 결과 종합 진단 표
-            st.markdown("##### ⚙️ 종목 상세 상태 검토")
+            st.markdown(
+                "<div style='font-size: 1.00rem; font-weight: 600; color: #E2E8F0; margin: 14px 0 6px 0; display: flex; align-items: center; gap: 6px;'>"
+                "<span>⚙️</span> 종목 상세 상태 검토"
+                "</div>",
+                unsafe_allow_html=True
+            )
             
             def get_status_str(cond):
                 if cond is None:
