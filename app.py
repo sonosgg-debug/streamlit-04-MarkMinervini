@@ -48,6 +48,7 @@ def fmt_curr(val, ticker):
 # 페이지 설정
 st.set_page_config(
     page_title="Mark Minervini Trend Template & VCP Screener",
+    page_icon="🏛️",
     layout="wide",
     initial_sidebar_state="expanded"
 )
