@@ -860,10 +860,39 @@ with tab1:
                             bordercolor="#334155",
                             borderwidth=1,
                             font=dict(color="#F8FAFC", size=11)
+                        ),
+                        yaxis=dict(
+                            showline=True,
+                            linecolor="#475569",
+                            gridcolor="#334155",
+                            tickfont=dict(color="#cbd5e1")
+                        ),
+                        yaxis2=dict(
+                            showline=True,
+                            linecolor="#475569",
+                            gridcolor="#334155",
+                            tickfont=dict(color="#cbd5e1")
+                        ),
+                        yaxis3=dict(
+                            overlaying="y",
+                            matches="y",
+                            side="right",
+                            showgrid=False,
+                            showline=True,
+                            linecolor="#475569",
+                            tickfont=dict(color="#cbd5e1")
+                        ),
+                        yaxis4=dict(
+                            overlaying="y2",
+                            matches="y2",
+                            side="right",
+                            showgrid=False,
+                            showline=True,
+                            linecolor="#475569",
+                            tickfont=dict(color="#cbd5e1")
                         )
                     )
-                    fig.update_xaxes(gridcolor="#334155", linecolor="#475569", tickfont=dict(color="#cbd5e1"))
-                    fig.update_yaxes(gridcolor="#334155", linecolor="#475569", tickfont=dict(color="#cbd5e1"))
+                    fig.update_xaxes(gridcolor="#334155", linecolor="#475569", tickfont=dict(color="#cbd5e1"), showline=True, mirror=True)
                     
                     # 주말 및 공휴일 공백 제거 (5일 주기 끊김 및 0값 방지)
                     dt_all = pd.date_range(start=df_chart.index[0], end=df_chart.index[-1], freq='B')
@@ -1058,10 +1087,39 @@ with tab2:
                     bordercolor="#334155",
                     borderwidth=1,
                     font=dict(color="#F8FAFC", size=11)
+                ),
+                yaxis=dict(
+                    showline=True,
+                    linecolor="#475569",
+                    gridcolor="#334155",
+                    tickfont=dict(color="#cbd5e1")
+                ),
+                yaxis2=dict(
+                    showline=True,
+                    linecolor="#475569",
+                    gridcolor="#334155",
+                    tickfont=dict(color="#cbd5e1")
+                ),
+                yaxis3=dict(
+                    overlaying="y",
+                    matches="y",
+                    side="right",
+                    showgrid=False,
+                    showline=True,
+                    linecolor="#475569",
+                    tickfont=dict(color="#cbd5e1")
+                ),
+                yaxis4=dict(
+                    overlaying="y2",
+                    matches="y2",
+                    side="right",
+                    showgrid=False,
+                    showline=True,
+                    linecolor="#475569",
+                    tickfont=dict(color="#cbd5e1")
                 )
             )
-            fig_m.update_xaxes(gridcolor="#334155", linecolor="#475569", tickfont=dict(color="#cbd5e1"))
-            fig_m.update_yaxes(gridcolor="#334155", linecolor="#475569", tickfont=dict(color="#cbd5e1"))
+            fig_m.update_xaxes(gridcolor="#334155", linecolor="#475569", tickfont=dict(color="#cbd5e1"), showline=True, mirror=True)
             
             # 주말 및 공휴일 공백 제거 (5일 주기 끊김 및 0값 방지)
             dt_all_m = pd.date_range(start=df_m.index[0], end=df_m.index[-1], freq='B')
