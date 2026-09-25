@@ -1,3 +1,6 @@
+import socket
+socket.setdefaulttimeout(5.0)
+
 import streamlit as st
 import pandas as pd
 import numpy as np
