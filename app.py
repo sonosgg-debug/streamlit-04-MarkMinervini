@@ -763,7 +763,7 @@ with tab1:
                         row=1, col=1
                     )
                     
-                    # VCP 수축 구간 반투명 박스 및 텍스트 레이블 마킹 (최근 60일 기준 데이터 존재 시)
+                    # VCP 수축 구간 시각화 (최근 60일 기준 데이터 존재 시)
                     if len(df_chart) >= 60:
                         d_60 = df_chart.index[-60]
                         d_30 = df_chart.index[-30]
@@ -778,32 +778,32 @@ with tab1:
                         amp2_calc = (p2['High'].max() - p2['Low'].min()) / p2['Low'].min() * 100.0
                         amp1_calc = (p1['High'].max() - p1['Low'].min()) / p1['Low'].min() * 100.0
                         
-                        # 60~30일 전 수축구간 3
-                        fig.add_vrect(
-                            x0=d_60, x1=d_30,
-                            fillcolor="rgba(66, 133, 244, 0.05)",
-                            line_width=0,
-                            annotation_text=f"Amp3: {amp3_calc:.1f}%",
-                            annotation_position="top left",
-                            row=1, col=1
-                        )
-                        # 30~10일 전 수축구간 2
-                        fig.add_vrect(
-                            x0=d_30, x1=d_10,
-                            fillcolor="rgba(251, 188, 5, 0.05)",
-                            line_width=0,
-                            annotation_text=f"Amp2: {amp2_calc:.1f}%",
-                            annotation_position="top left",
-                            row=1, col=1
-                        )
-                        # 최근 10일 조임구간 1
-                        fig.add_vrect(
-                            x0=d_10, x1=d_end,
-                            fillcolor="rgba(52, 168, 83, 0.08)",
-                            line_width=0,
-                            annotation_text=f"Amp1: {amp1_calc:.1f}% (최종 수축)",
-                            annotation_position="top left",
-                            row=1, col=1
+                        is_contracting = (amp3_calc > amp2_calc > amp1_calc)
+                        status_str = "🟢 3단계 점진적 수축 (Pass)" if is_contracting else "🟡 수축 진행/불규칙"
+                        
+                        # 3단계 구간 구분선 (배경색 왜곡 없이 깔끔한 점선으로 구간만 명확히 구분)
+                        fig.add_vline(x=d_60, line=dict(color='#475569', width=1, dash='dot'), row=1, col=1)
+                        fig.add_vline(x=d_30, line=dict(color='#475569', width=1, dash='dot'), row=1, col=1)
+                        fig.add_vline(x=d_10, line=dict(color='#38BDF8', width=1.5, dash='dash'), row=1, col=1)
+                        
+                        # 차트 좌측 상단 VCP 수축 정보 통합 카드 (겹침 원천 차단 및 배경 일체화)
+                        fig.add_annotation(
+                            xref='paper', yref='paper',
+                            x=0.015, y=0.98,
+                            xanchor='left', yanchor='top',
+                            text=(
+                                f"<b>🌀 VCP 변동성 수축 분석 (최근 60일)</b> | 상태: <b>{status_str}</b><br>"
+                                f"<span style='color:#CBD5E1;'>Amp3(60~30일):</span> <b>{amp3_calc:.1f}%</b>  ➔  "
+                                f"<span style='color:#CBD5E1;'>Amp2(30~10일):</span> <b>{amp2_calc:.1f}%</b>  ➔  "
+                                f"<span style='color:#38BDF8;'>Amp1(최근 10일):</span> <b>{amp1_calc:.1f}%</b> (최종 수축)"
+                            ),
+                            showarrow=False,
+                            font=dict(family="Pretendard, Malgun Gothic, sans-serif", size=11, color="#F8FAFC"),
+                            align='left',
+                            bgcolor='rgba(15, 23, 42, 0.88)',
+                            bordercolor='#334155',
+                            borderwidth=1,
+                            borderpad=7
                         )
                     
                     # 2. 거래량 보조 차트 구성
@@ -980,7 +980,7 @@ with tab2:
             fig_m.add_trace(go.Scatter(x=df_m.index, y=df_m['High_52w'], line=dict(color='#BDC1C6', width=1, dash='dash'), name="52주 신고가선"), row=1, col=1)
             fig_m.add_trace(go.Scatter(x=df_m.index, y=df_m['Low_52w'], line=dict(color='#BDC1C6', width=1, dash='dot'), name="52주 신저가선"), row=1, col=1)
             
-            # VCP 3구간 색상 칠하기
+            # VCP 3구간 시각화 (최근 60일 기준 데이터 존재 시)
             if len(df_m) >= 60:
                 d60_m = df_m.index[-60]
                 d30_m = df_m.index[-30]
@@ -995,9 +995,33 @@ with tab2:
                 m_amp2 = (m_p2['High'].max() - m_p2['Low'].min()) / m_p2['Low'].min() * 100.0
                 m_amp1 = (m_p1['High'].max() - m_p1['Low'].min()) / m_p1['Low'].min() * 100.0
                 
-                fig_m.add_vrect(x0=d60_m, x1=d30_m, fillcolor="rgba(66, 133, 244, 0.05)", line_width=0, annotation_text=f"Amp3: {m_amp3:.1f}%", annotation_position="top left", row=1, col=1)
-                fig_m.add_vrect(x0=d30_m, x1=d10_m, fillcolor="rgba(251, 188, 5, 0.05)", line_width=0, annotation_text=f"Amp2: {m_amp2:.1f}%", annotation_position="top left", row=1, col=1)
-                fig_m.add_vrect(x0=d10_m, x1=dend_m, fillcolor="rgba(52, 168, 83, 0.08)", line_width=0, annotation_text=f"Amp1: {m_amp1:.1f}%", annotation_position="top left", row=1, col=1)
+                is_m_contracting = (m_amp3 > m_amp2 > m_amp1)
+                m_status_str = "🟢 3단계 점진적 수축 (Pass)" if is_m_contracting else "🟡 수축 진행/불규칙"
+                
+                # 3단계 구간 구분선 (배경색 왜곡 없이 깔끔한 점선으로 구간만 명확히 구분)
+                fig_m.add_vline(x=d60_m, line=dict(color='#475569', width=1, dash='dot'), row=1, col=1)
+                fig_m.add_vline(x=d30_m, line=dict(color='#475569', width=1, dash='dot'), row=1, col=1)
+                fig_m.add_vline(x=d10_m, line=dict(color='#38BDF8', width=1.5, dash='dash'), row=1, col=1)
+                
+                # 차트 좌측 상단 VCP 수축 정보 통합 카드 (겹침 원천 차단 및 배경 일체화)
+                fig_m.add_annotation(
+                    xref='paper', yref='paper',
+                    x=0.015, y=0.98,
+                    xanchor='left', yanchor='top',
+                    text=(
+                        f"<b>🌀 VCP 변동성 수축 분석 (최근 60일)</b> | 상태: <b>{m_status_str}</b><br>"
+                        f"<span style='color:#CBD5E1;'>Amp3(60~30일):</span> <b>{m_amp3:.1f}%</b>  ➔  "
+                        f"<span style='color:#CBD5E1;'>Amp2(30~10일):</span> <b>{m_amp2:.1f}%</b>  ➔  "
+                        f"<span style='color:#38BDF8;'>Amp1(최근 10일):</span> <b>{m_amp1:.1f}%</b> (최종 수축)"
+                    ),
+                    showarrow=False,
+                    font=dict(family="Pretendard, Malgun Gothic, sans-serif", size=11, color="#F8FAFC"),
+                    align='left',
+                    bgcolor='rgba(15, 23, 42, 0.88)',
+                    bordercolor='#334155',
+                    borderwidth=1,
+                    borderpad=7
+                )
                 
             # 거래량 보조 지표
             v_colors = []
