@@ -8,6 +8,8 @@ import warnings
 import contextlib
 import io
 import sys
+import concurrent.futures
+from datetime import datetime, timedelta
 
 warnings.filterwarnings('ignore')
 
@@ -81,38 +83,64 @@ def get_stock_list(market_code: str) -> pd.DataFrame:
 
 def download_prices_chunked(tickers: list, chunk_size: int = 150) -> pd.DataFrame:
     """
-    yfinance를 활용하여 티커 목록의 과거 2개년 주가 데이터를 배치 다운로드합니다.
-    야후 파이낸스 차단(Rate Limit)을 예방하기 위해 요청 지연 및 에러 제어 로직을 보강했습니다.
+    한국 주식은 FinanceDataReader 멀티스레드 병렬 수집(네이버 금융 공식 시세)으로 무결성을 보장하고,
+    미국 주식은 yfinance 멀티 다운로드를 활용하여 과거 2개년 주가 데이터를 수집합니다.
     """
     print(f"Downloading historical price data for {len(tickers)} tickers (chunk size: {chunk_size})...")
     
     all_data = []
+    start_date = (datetime.now() - timedelta(days=730)).strftime('%Y-%m-%d')
     
     for i in tqdm(range(0, len(tickers), chunk_size), desc="Downloading"):
         chunk = tickers[i:i + chunk_size]
-        try:
-            # yfinance의 stderr 출력(실패 내역, 404 에러 등)을 억제합니다.
-            with suppress_stderr():
-                df_chunk = yf.download(
-                    tickers=chunk, 
-                    period="2y", 
-                    interval="1d", 
-                    group_by="ticker", 
-                    auto_adjust=True, 
-                    threads=True,
-                    progress=False,
-                    timeout=20
-                )
-            
-            if not df_chunk.empty:
-                all_data.append(df_chunk)
-            
-            # Rate Limit 방지를 위해 대기 시간을 1.5초로 늘려 안정성 확보
-            time.sleep(1.5)
-        except Exception:
-            # 에러 발생 시 진행 과정에서 에러 로그가 터지지 않고 다음 청크로 넘어가게 조용히 무시
-            time.sleep(2.0)
-            continue
+        kr_chunk = [t for t in chunk if t.endswith('.KS') or t.endswith('.KQ')]
+        us_chunk = [t for t in chunk if not (t.endswith('.KS') or t.endswith('.KQ'))]
+        
+        # 1. 한국 주식: FinanceDataReader 멀티스레드 병렬 수집 (네이버 금융 공식 시세)
+        if kr_chunk:
+            def fetch_kr_stock(t):
+                code = t.split('.')[0]
+                try:
+                    df = fdr.DataReader(code, start_date)
+                    if df is not None and not df.empty:
+                        df = df.dropna(subset=['Close', 'High', 'Low', 'Volume'])
+                        if df.index.tz is not None:
+                            df.index = df.index.tz_localize(None)
+                        df.columns = pd.MultiIndex.from_product([[t], df.columns])
+                        return df
+                except Exception:
+                    pass
+                return None
+
+            with concurrent.futures.ThreadPoolExecutor(max_workers=min(len(kr_chunk), 20)) as executor:
+                kr_dfs = [d for d in executor.map(fetch_kr_stock, kr_chunk) if d is not None]
+
+            if kr_dfs:
+                df_kr_chunk = pd.concat(kr_dfs, axis=1)
+                all_data.append(df_kr_chunk)
+
+        # 2. 미국 주식: yfinance 일괄 다운로드
+        if us_chunk:
+            try:
+                with suppress_stderr():
+                    df_us_chunk = yf.download(
+                        tickers=us_chunk, 
+                        period="2y", 
+                        interval="1d", 
+                        group_by="ticker", 
+                        auto_adjust=True, 
+                        threads=True,
+                        progress=False,
+                        timeout=20
+                    )
+                if not df_us_chunk.empty:
+                    if df_us_chunk.index.tz is not None:
+                        df_us_chunk.index = df_us_chunk.index.tz_localize(None)
+                    all_data.append(df_us_chunk)
+                time.sleep(1.0)
+            except Exception:
+                time.sleep(1.5)
+                continue
 
     if not all_data:
         return pd.DataFrame()

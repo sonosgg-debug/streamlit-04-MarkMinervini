@@ -1,7 +1,11 @@
+import socket
+socket.setdefaulttimeout(15.0)
+
 import streamlit as st
 import pandas as pd
 import numpy as np
 import yfinance as yf
+import FinanceDataReader as fdr
 import datetime
 
 # 한국 표준시(KST) 타임존 (UTC+9)
@@ -18,14 +22,23 @@ from plotly.subplots import make_subplots
 from data_loader import get_stock_list, download_prices_chunked
 from screener import run_screener, check_vcp_pattern, check_trend_template, calculate_returns, calculate_rs_ratings
 
-# 단일 종목 주가 데이터 캐시 로더 (타임아웃 15초 및 자동 캐싱으로 재부팅 시 무한 대기 방지)
+# 단일 종목 주가 데이터 캐시 로더 (한국주는 FDR, 미국주는 yfinance)
 @st.cache_data(ttl=3600, show_spinner=False)
 def load_single_stock_history(ticker: str) -> pd.DataFrame:
     try:
-        df = yf.download(ticker, period="2y", progress=False, timeout=15)
-        if isinstance(df.columns, pd.MultiIndex):
-            df.columns = df.columns.droplevel(1)
+        is_kr = ticker.endswith('.KS') or ticker.endswith('.KQ')
+        if is_kr:
+            code = ticker.split('.')[0]
+            start_date = (datetime.datetime.now() - datetime.timedelta(days=730)).strftime('%Y-%m-%d')
+            df = fdr.DataReader(code, start_date)
+        else:
+            df = yf.download(ticker, period="2y", progress=False, timeout=15)
+            if isinstance(df.columns, pd.MultiIndex):
+                df.columns = df.columns.droplevel(1)
+                
         df = df.dropna(subset=['Close', 'High', 'Low', 'Volume'])
+        if df.index.tz is not None:
+            df.index = df.index.tz_localize(None)
         return df
     except Exception:
         return pd.DataFrame()
@@ -959,7 +972,15 @@ with tab1:
                             showticklabels=True
                         )
                     )
-                    fig.update_xaxes(gridcolor="#334155", linecolor="#475569", tickfont=dict(color="#cbd5e1"), showline=True, mirror=True)
+                    fig.update_xaxes(
+                        tickformat="%Y-%m-%d",
+                        hoverformat="%Y-%m-%d",
+                        gridcolor="#334155", 
+                        linecolor="#475569", 
+                        tickfont=dict(color="#cbd5e1"), 
+                        showline=True, 
+                        mirror=True
+                    )
                     
                     # 주말 및 공휴일 공백 제거 (5일 주기 끊김 및 0값 방지)
                     dt_all = pd.date_range(start=df_chart.index[0], end=df_chart.index[-1], freq='B')
@@ -1246,7 +1267,15 @@ with tab2:
                     showticklabels=True
                 )
             )
-            fig_m.update_xaxes(gridcolor="#334155", linecolor="#475569", tickfont=dict(color="#cbd5e1"), showline=True, mirror=True)
+            fig_m.update_xaxes(
+                tickformat="%Y-%m-%d",
+                hoverformat="%Y-%m-%d",
+                gridcolor="#334155", 
+                linecolor="#475569", 
+                tickfont=dict(color="#cbd5e1"), 
+                showline=True, 
+                mirror=True
+            )
             
             # 주말 및 공휴일 공백 제거 (5일 주기 끊김 및 0값 방지)
             dt_all_m = pd.date_range(start=df_m.index[0], end=df_m.index[-1], freq='B')
