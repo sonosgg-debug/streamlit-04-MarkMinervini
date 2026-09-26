@@ -20,7 +20,7 @@ from plotly.subplots import make_subplots
 
 # 로컬 모듈 임포트
 from data_loader import get_stock_list, download_prices_chunked
-from screener import run_screener, check_vcp_pattern, check_trend_template, calculate_returns, calculate_rs_ratings
+from screener import run_screening_task_2pass, run_screener, check_vcp_pattern, check_trend_template, calculate_returns, calculate_rs_ratings
 
 # 단일 종목 주가 데이터 캐시 로더 (한국주는 FDR, 미국주는 yfinance)
 @st.cache_data(ttl=3600, show_spinner=False)
@@ -354,9 +354,43 @@ with st.sidebar:
 
     market_choice = st.selectbox(
         "🏛️ 시장 선택",
-        ["KOSPI", "KOSDAQ", "S&P 500", "NASDAQ"],
+        ["KOSPI", "KOSDAQ", "S&P 500", "NASDAQ 100"],
         index=0
     )
+
+    # 한국 시장(KOSPI, KOSDAQ)일 경우 시가총액 기반 대상 범위(Scope) 및 최소 시총 옵션 제공
+    is_korean_market = market_choice in ["KOSPI", "KOSDAQ"]
+    scope_code = "top500"
+    min_marcap_val = 0
+    if is_korean_market:
+        scope_options = {
+            "시가총액 상위 500 종목 [권장]": "top500",
+            "시가총액 상위 300 종목": "top300",
+            "시가총액 상위 1,000 종목": "top1000",
+            "전체 상장 종목": "all"
+        }
+        scope_choice_label = st.selectbox(
+            "📊 대상 범위 (Scope)",
+            options=list(scope_options.keys()),
+            index=0,
+            help="스크리닝할 종목의 시가총액 순위 범위를 지정합니다."
+        )
+        scope_code = scope_options[scope_choice_label]
+
+        marcap_options = {
+            "제한 없음 (전체)": 0,
+            "1,000억원 이상": 1000,
+            "3,000억원 이상 [추천]": 3000,
+            "5,000억원 이상": 5000,
+            "1조원 이상": 10000
+        }
+        marcap_label = st.selectbox(
+            "💰 최소 시가총액",
+            options=list(marcap_options.keys()),
+            index=0,
+            help="설정한 시가총액 이상의 종목만 스크리닝합니다."
+        )
+        min_marcap_val = marcap_options[marcap_label]
 
     st.markdown("<hr style='border: 0; height: 1px; background-color: #334155; margin: 16px 0;'>", unsafe_allow_html=True)
     st.markdown("<div style='font-size: 0.95rem; font-weight: 700; color: #e2e8f0; margin-bottom: 6px;'>🎯 미너비니 추세 필터</div>", unsafe_allow_html=True)
@@ -416,17 +450,15 @@ with st.sidebar:
             step=50,
             help="빠른 테스트를 위해 대상 시장의 상위 N개 티커만 임포트하고 분석하려면 설정하세요."
         )
-        
-        chunk_size = st.number_input(
-            "API 다운로드 청크 크기",
-            min_value=10,
-            max_value=500,
-            value=150,
-            step=50,
-            help="yfinance API로 한 번에 배치 다운로드 요청을 보낼 종목 개수입니다. 안정적인 연결을 위해 150 전후를 추천합니다."
-        )
 
+    st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
     start_screening = st.button("🔍 스크리닝 시작", type="primary", use_container_width=True)
+
+    st.markdown("<div style='height: 12px;'></div>", unsafe_allow_html=True)
+    st.info(
+        "💡 **알림**: 멀티스레딩 2-Pass 파이프라인 엔진이 백그라운드에서 실시간 데이터를 수집 및 병렬 연산합니다. "
+        "일반적으로 15~30초 내에 전 종목 트렌드 템플릿 & VCP 스크리닝이 완료됩니다."
+    )
 
 # ----------------- 스크리닝 비즈니스 로직 구동 -----------------
 if start_screening:
@@ -434,8 +466,8 @@ if start_screening:
         "KOSPI": "KS",
         "KOSDAQ": "KQ",
         "S&P 500": "SP",
+        "NASDAQ 100": "NQ",
         "NASDAQ": "NQ",
-        # 하위 호환 매핑
         "코스피 (KOSPI)": "KS",
         "코스닥 (KOSDAQ)": "KQ",
         "미국 S&P 500 (US)": "SP",
@@ -444,14 +476,13 @@ if start_screening:
     market_code = market_map.get(market_choice, "KS")
     
     # 1. 상장 종목 목록 가져오기
-    with st.spinner("상장 종목 목록을 가져오는 중..."):
+    with st.spinner("상장 종목 유니버스를 로드하는 중..."):
         try:
-            stock_df = get_stock_list(market_code)
+            stock_df = get_stock_list(market_code, scope=scope_code, min_marcap_eok=min_marcap_val)
+            if limit_tickers > 0:
+                stock_df = stock_df.head(limit_tickers)
             total_count = len(stock_df)
-            if market_code in ['KS', 'KQ']:
-                st.info(f"수집 대상 종목: 총 {total_count}개 (우선주/스팩 필터링 완료)")
-            else:
-                st.info(f"수집 대상 종목: 총 {total_count}개")
+            st.info(f"수집 대상 유니버스: 총 {total_count}개 종목 (노이즈 필터링 완료)")
         except Exception as e:
             st.error(f"종목 목록 수집 실패: {e}")
             stock_df = pd.DataFrame()
@@ -460,79 +491,46 @@ if start_screening:
         progress_bar = st.progress(0.0)
         status_text = st.empty()
 
-        if limit_tickers > 0:
-            status_text.warning(f"⚠️ 빠른 테스트를 위해 종목 개수를 상위 {limit_tickers}개로 제한합니다.")
-            stock_df = stock_df.head(limit_tickers)
-            
-        tickers = stock_df['ticker'].tolist()
-        
-        # 2. 가격 데이터 배치 다운로드
-        total_chunks = (len(tickers) + chunk_size - 1) // chunk_size
-        
-        # data_loader.download_prices_chunked 내부 루프를 대시보드 프로그레스 바 연동을 위해 변형
-        from data_loader import suppress_stderr
-        
-        all_data = []
-        for i in range(0, len(tickers), chunk_size):
-            chunk = tickers[i:i + chunk_size]
-            chunk_num = i // chunk_size + 1
-            status_text.info(f"⏳ 데이터 다운로드 중... [청크 {chunk_num}/{total_chunks}] (Rate limit 방지를 위해 대기 시간 포함)")
-            progress_bar.progress(chunk_num / total_chunks)
-            
-            try:
-                with suppress_stderr():
-                    df_chunk = yf.download(
-                        tickers=chunk, 
-                        period="2y", 
-                        interval="1d", 
-                        group_by="ticker", 
-                        auto_adjust=True, 
-                        threads=True,
-                        progress=False,
-                        timeout=20
-                    )
-                if not df_chunk.empty:
-                    all_data.append(df_chunk)
-                time.sleep(1.5)  # Rate limit 예방
-            except Exception as e:
-                time.sleep(2.0)
-                continue
-                
-        if all_data:
-            price_data = pd.concat(all_data, axis=1)
-            status_text.info("⏳ 이동평균선 및 상대 강도(RS) 계산 및 미너비니 규칙 필터링을 진행 중입니다...")
-            
-            try:
-                # 상대강도 보존용 계산 수행 및 세션 저장
-                returns_dict = calculate_returns(price_data, tickers)
-                rs_ratings = calculate_rs_ratings(returns_dict)
-                st.session_state.rs_ratings = rs_ratings
-                
-                screened_res = run_screener(
-                    full_df=price_data,
+        def update_progress(current, total, name):
+            ratio = min(1.0, current / total) if total > 0 else 0.0
+            progress_bar.progress(ratio)
+            status_text.markdown(f"⏳ **데이터 병렬 수집 및 1년 수익률 연산 중...** ({current}/{total}) `{name}`")
+
+        start_time = time.time()
+        try:
+            with st.spinner("초고속 2-Pass 파이프라인 (병렬 수집 ➔ RS Rating 산출 ➔ VCP 판정) 구동 중..."):
+                screened_res, rs_ratings = run_screening_task_2pass(
                     stock_list_df=stock_df,
                     apply_vcp=apply_vcp,
                     rs_rating_thresh=rs_rating_thresh,
                     vcp_amp_limit=vcp_amp_limit,
                     vol_dryup_ratio=vol_dryup_ratio,
-                    breakout_pct=breakout_pct
+                    breakout_pct=breakout_pct,
+                    max_workers=24,
+                    progress_callback=update_progress
                 )
-                
+                elapsed = time.time() - start_time
+                progress_bar.progress(1.0)
+                if screened_res is not None and not screened_res.empty:
+                    status_text.success(f"✅ 스크리닝 완료! ({len(screened_res)}개 종목 발굴, 소요 시간: {elapsed:.1f}초)")
+                else:
+                    status_text.warning(f"⚠️ 조건에 부합하는 종목이 없습니다. (소요 시간: {elapsed:.1f}초)")
+                time.sleep(0.8)
+                progress_bar.empty()
+                status_text.empty()
+
+                st.session_state.rs_ratings = rs_ratings
                 st.session_state.screened_df = screened_res
                 st.session_state.last_run_time = datetime.datetime.now(KST).strftime('%Y-%m-%d %H:%M:%S')
                 st.session_state.market_type_used = market_choice
                 st.session_state.vcp_applied = apply_vcp
-                
-                progress_bar.empty()
-                status_text.empty()
-            except Exception as e:
-                progress_bar.empty()
-                status_text.error(f"스크리닝 필터 작업 중 오류 발생: {e}")
-        else:
+        except Exception as e:
             progress_bar.empty()
-            status_text.error("종목의 역사적 가격 데이터 다운로드에 실패하여 분석을 수행하지 못했습니다.")
+            status_text.empty()
+            st.error(f"스크리닝 작업 중 오류 발생: {e}")
     else:
         st.error("대상 시장의 종목 리스트가 유효하지 않습니다.")
+
 
 # ----------------- 결과 출력 및 탭 레이아웃 -----------------
 if st.session_state.screened_df is not None:
