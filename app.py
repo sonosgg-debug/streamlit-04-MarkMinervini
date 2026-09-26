@@ -18,9 +18,24 @@ from openpyxl.utils import get_column_letter
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
-# 로컬 모듈 임포트
-from data_loader import get_stock_list, download_prices_chunked
-from screener import run_screening_task_2pass, run_screener, check_vcp_pattern, check_trend_template, calculate_returns, calculate_rs_ratings
+# 로컬 모듈 임포트 (Streamlit Cloud 환경에서 로컬 모듈 캐시 갱신 보장 및 상세 오류 트래킹)
+import importlib
+import sys
+import os
+
+try:
+    import data_loader
+    importlib.reload(data_loader)
+    from data_loader import get_stock_list, download_prices_chunked
+
+    import screener
+    importlib.reload(screener)
+    from screener import run_screening_task_2pass, run_screener, check_vcp_pattern, check_trend_template, calculate_returns, calculate_rs_ratings
+except Exception as e:
+    import traceback
+    st.error(f"모듈 로드 중 오류가 발생했습니다: {e}")
+    st.code(traceback.format_exc())
+    raise e
 
 # 단일 종목 주가 데이터 캐시 로더 (한국주는 FDR, 미국주는 yfinance)
 @st.cache_data(ttl=3600, show_spinner=False)
