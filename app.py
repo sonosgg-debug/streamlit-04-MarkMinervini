@@ -379,16 +379,16 @@ with st.sidebar:
     min_marcap_val = 0
     if is_korean_market:
         scope_options = {
-            "시가총액 상위 500 종목 [권장]": "top500",
-            "시가총액 상위 300 종목": "top300",
-            "시가총액 상위 1,000 종목": "top1000",
-            "전체 상장 종목": "all"
+            "시총 상위 300 (쾌속 모드 ~15초)": "top300",
+            "시총 상위 500 (권장 모드 ~25초)": "top500",
+            "시총 상위 1,000 (심층 모드 ~50초)": "top1000",
+            "시장 전체 종목 (전체 모드)": "all"
         }
         scope_choice_label = st.selectbox(
-            "📊 대상 범위 (Scope)",
+            "🎯 대상 범위 (Scope)",
             options=list(scope_options.keys()),
-            index=0,
-            help="스크리닝할 종목의 시가총액 순위 범위를 지정합니다."
+            index=1,
+            help="시가총액 상위 종목 위주로 분석하여 스크리닝 속도를 최적화합니다."
         )
         scope_code = scope_options[scope_choice_label]
 
