@@ -119,11 +119,16 @@ st.markdown("""
     }
     .metric-card {
         background-color: #202124;
-        color: #F1F3F4;
+        color: #CBD5E1;
         padding: 15px;
         border-radius: 8px;
         border-left: 5px solid #8AB4F8;
         margin-bottom: 10px;
+    }
+    .metric-card ul, .metric-card li {
+        font-size: 0.9rem;
+        line-height: 1.5;
+        color: #CBD5E1;
     }
     .status-pass {
         color: #0F9D58;
@@ -149,11 +154,16 @@ st.markdown("""
         line-height: 1.5;
         margin-bottom: 0;
     }
-    /* 규칙 자가진단표 본문 폰트 크기 축소 (1pt 축소) */
-    .st-key-diagnosis_container [data-testid="stMarkdownContainer"] p,
-    .st-key-manual_diagnosis_container [data-testid="stMarkdownContainer"] p {
+    /* 규칙 자가진단표 본문 폰트 크기 및 색상 (App-02 수준으로 통일) */
+    div[class*="st-key-diagnosis_container"] [data-testid="stMarkdownContainer"] *,
+    div[class*="st-key-manual_diagnosis_container"] [data-testid="stMarkdownContainer"] * {
         font-size: 0.9rem !important;
-        line-height: 1.6;
+        line-height: 1.5 !important;
+        color: #CBD5E1 !important;
+    }
+    div[class*="st-key-diagnosis_container"] [data-testid="stMarkdownContainer"] p,
+    div[class*="st-key-manual_diagnosis_container"] [data-testid="stMarkdownContainer"] p {
+        margin-bottom: 0.35rem !important;
     }
     /* 다운로드 버튼 공통 통일 스타일 */
     div[data-testid="stDownloadButton"] > button,
@@ -1002,7 +1012,7 @@ with tab1:
                     
                     # --- 규칙 진단 결과 카드 레이아웃 ---
                     st.markdown(
-                        "<div style='font-size: 1.00rem; font-weight: 600; color: #E2E8F0; margin: 14px 0 6px 0; display: flex; align-items: center; gap: 6px;'>"
+                        "<div style='font-size: 1.00rem; font-weight: 600; color: #CBD5E1; margin: 14px 0 6px 0; display: flex; align-items: center; gap: 6px;'>"
                         "<span>🔍</span> 미너비니의 규칙 자가진단표"
                         "</div>",
                         unsafe_allow_html=True
@@ -1297,7 +1307,7 @@ with tab2:
             
             # 2. 결과 종합 진단 표
             st.markdown(
-                "<div style='font-size: 1.00rem; font-weight: 600; color: #E2E8F0; margin: 14px 0 6px 0; display: flex; align-items: center; gap: 6px;'>"
+                "<div style='font-size: 1.00rem; font-weight: 600; color: #CBD5E1; margin: 14px 0 6px 0; display: flex; align-items: center; gap: 6px;'>"
                 "<span>⚙️</span> 종목 상세 상태 검토"
                 "</div>",
                 unsafe_allow_html=True
