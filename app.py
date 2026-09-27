@@ -835,9 +835,9 @@ with tab1:
                         is_contracting = (amp3_calc > amp2_calc > amp1_calc)
                         status_str = "🟢 3단계 점진적 수축 (Pass)" if is_contracting else "🟡 수축 진행/불규칙"
                         
-                        # 3단계 구간 구분선 (배경색 왜곡 없이 깔끔한 점선으로 구간만 명확히 구분)
-                        fig.add_vline(x=d_60, line=dict(color='#475569', width=1, dash='dot'), row=1, col=1)
-                        fig.add_vline(x=d_30, line=dict(color='#475569', width=1, dash='dot'), row=1, col=1)
+                        # 3단계 구간 구분선 (Amp3, Amp2 선명도 개선 및 Amp1 강조)
+                        fig.add_vline(x=d_60, line=dict(color='#94A3B8', width=1.2, dash='dash'), row=1, col=1)
+                        fig.add_vline(x=d_30, line=dict(color='#94A3B8', width=1.2, dash='dash'), row=1, col=1)
                         fig.add_vline(x=d_10, line=dict(color='#38BDF8', width=1.5, dash='dash'), row=1, col=1)
                         
                         # 차트 좌측 상단 VCP 수축 정보 통합 카드 (겹침 원천 차단 및 배경 일체화)
@@ -1149,9 +1149,9 @@ with tab2:
                 is_m_contracting = (m_amp3 > m_amp2 > m_amp1)
                 m_status_str = "🟢 3단계 점진적 수축 (Pass)" if is_m_contracting else "🟡 수축 진행/불규칙"
                 
-                # 3단계 구간 구분선 (배경색 왜곡 없이 깔끔한 점선으로 구간만 명확히 구분)
-                fig_m.add_vline(x=d60_m, line=dict(color='#475569', width=1, dash='dot'), row=1, col=1)
-                fig_m.add_vline(x=d30_m, line=dict(color='#475569', width=1, dash='dot'), row=1, col=1)
+                # 3단계 구간 구분선 (Amp3, Amp2 선명도 개선 및 Amp1 강조)
+                fig_m.add_vline(x=d60_m, line=dict(color='#94A3B8', width=1.2, dash='dash'), row=1, col=1)
+                fig_m.add_vline(x=d30_m, line=dict(color='#94A3B8', width=1.2, dash='dash'), row=1, col=1)
                 fig_m.add_vline(x=d10_m, line=dict(color='#38BDF8', width=1.5, dash='dash'), row=1, col=1)
                 
                 # 차트 좌측 상단 VCP 수축 정보 통합 카드 (겹침 원천 차단 및 배경 일체화)
