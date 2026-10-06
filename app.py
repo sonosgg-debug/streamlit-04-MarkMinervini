@@ -1,5 +1,3 @@
-import socket
-socket.setdefaulttimeout(15.0)
 
 import streamlit as st
 import pandas as pd
@@ -71,7 +69,6 @@ STANDARD_CHART_THEME = {
     'hover_bg': 'rgba(15, 23, 42, 0.9)',
     'hover_border': '#334155'
 }
-
 
 # 가격 통화 포맷팅 함수
 def fmt_curr(val, ticker):
@@ -549,7 +546,6 @@ if start_screening:
             st.error(f"스크리닝 작업 중 오류 발생: {e}")
     else:
         st.error("대상 시장의 종목 리스트가 유효하지 않습니다.")
-
 
 # ----------------- 결과 출력 및 탭 레이아웃 -----------------
 if st.session_state.screened_df is not None:
