@@ -644,12 +644,34 @@ with tab1:
             excel_data = excel_buffer.getvalue()
             
             market_code_map = {
+                # 현재 사이드바 UI 선택값
+                "KOSPI": "KS",
+                "KOSDAQ": "KQ",
+                "S&P 500": "SP",
+                "NASDAQ 100": "NQ",
+                "NASDAQ": "NQ",
+                # 레거시 및 호환용 명칭
                 "코스피 (KOSPI)": "KS",
                 "코스닥 (KOSDAQ)": "KQ",
+                "전체 시장 (KOSPI + KOSDAQ)": "KS&KQ",
                 "미국 S&P 500 (US)": "SP",
-                "미국 NASDAQ 100 (US)": "NQ"
+                "미국 NASDAQ 100 (US)": "NQ",
+                "ALL": "KS&KQ"
             }
-            market_suffix = market_code_map.get(st.session_state.market_type_used, "ALL")
+            raw_market = str(st.session_state.market_type_used).strip() if st.session_state.market_type_used else ""
+            market_suffix = market_code_map.get(raw_market)
+            if not market_suffix:
+                key_upper = raw_market.upper()
+                if "KOSPI" in key_upper or "코스피" in raw_market:
+                    market_suffix = "KS"
+                elif "KOSDAQ" in key_upper or "코스닥" in raw_market:
+                    market_suffix = "KQ"
+                elif "S&P" in key_upper or "500" in raw_market:
+                    market_suffix = "SP"
+                elif "NASDAQ" in key_upper or "100" in raw_market:
+                    market_suffix = "NQ"
+                else:
+                    market_suffix = "ALL"
             today_str = datetime.datetime.now(KST).strftime('%Y-%m-%d')
             vcp_suffix = "-VCP" if st.session_state.vcp_applied else ""
             excel_filename = f"MarkMinerviniMTT-{market_suffix}{vcp_suffix}-{today_str}.xlsx"
