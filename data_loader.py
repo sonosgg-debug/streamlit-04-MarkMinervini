@@ -78,7 +78,10 @@ def get_fallback_marcap_map() -> dict:
         target_date = (today - timedelta(days=days_back)).strftime("%Y-%m-%d")
         url = f"{base_url}{target_date}.csv"
         try:
-            df = pd.read_csv(url, dtype={"Code": str, "ISU_SRT_CD": str}, low_memory=False)
+            resp = requests.get(url, timeout=3.0)
+            if resp.status_code != 200:
+                continue
+            df = pd.read_csv(io.StringIO(resp.text), dtype={"Code": str, "ISU_SRT_CD": str}, low_memory=False)
             code_col = "Code" if "Code" in df.columns else "ISU_SRT_CD"
             marcap_col = None
             for col in ["Marcap", "MKTCAP", "시가총액"]:
@@ -100,7 +103,7 @@ def get_fallback_marcap_map() -> dict:
     return {}
 
 
-def get_stock_list(market_code: str, scope: str = 'top500', min_marcap_eok: int = 0) -> pd.DataFrame:
+def get_stock_list(market_code: str, scope: str = 'top500', min_marcap_eok: int = 0, **kwargs) -> pd.DataFrame:
     """
     시장 코드에 매칭되는 종목 목록을 반환합니다.
     - KS: KOSPI
@@ -215,7 +218,7 @@ def get_stock_list(market_code: str, scope: str = 'top500', min_marcap_eok: int 
         raise ValueError(f"Invalid market code: {market_code}. Choose from 'KS', 'KQ', 'SP', 'NQ'.")
 
 
-def download_prices_chunked(tickers: list, chunk_size: int = 150) -> pd.DataFrame:
+def download_prices_chunked(tickers: list, chunk_size: int = 150, **kwargs) -> pd.DataFrame:
     """하위 호환용 일괄 수집 함수"""
     print(f"Downloading historical price data for {len(tickers)} tickers (chunk size: {chunk_size})...")
     all_data = []

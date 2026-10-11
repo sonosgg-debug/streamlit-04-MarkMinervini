@@ -8,7 +8,7 @@ import time
 
 KST = timezone(timedelta(hours=9))
 
-def calculate_returns(full_df: pd.DataFrame, tickers: list) -> dict:
+def calculate_returns(full_df: pd.DataFrame, tickers: list, **kwargs) -> dict:
     """
     각 종목의 최근 1년(252 영업일) 주가 수익률을 계산합니다.
     """
@@ -41,7 +41,7 @@ def calculate_returns(full_df: pd.DataFrame, tickers: list) -> dict:
     return returns_dict
 
 
-def calculate_rs_ratings(returns_dict: dict) -> dict:
+def calculate_rs_ratings(returns_dict: dict, **kwargs) -> dict:
     """
     최근 1년 주가 수익률을 바탕으로 상대 강도(RS) Rating 백분위수(0~99)를 계산합니다.
     """
@@ -57,7 +57,7 @@ def calculate_rs_ratings(returns_dict: dict) -> dict:
     return rs_ranks.to_dict()
 
 
-def check_vcp_pattern(df: pd.DataFrame, amp_limit: float = 0.10, vol_dryup_ratio: float = 0.8, breakout_pct: float = 0.95) -> tuple:
+def check_vcp_pattern(df: pd.DataFrame, amp_limit: float = 0.10, vol_dryup_ratio: float = 0.8, breakout_pct: float = 0.95, **kwargs) -> tuple:
     """
     VCP(Volatility Contraction Pattern) 조건을 검증합니다.
     조건을 만족할 경우 (마지막 10일 진폭, True)를 반환하고, 그렇지 않으면 (None, False)를 반환합니다.
@@ -106,7 +106,7 @@ def check_vcp_pattern(df: pd.DataFrame, amp_limit: float = 0.10, vol_dryup_ratio
     return None, False
 
 
-def check_trend_template(ticker: str, df: pd.DataFrame, rs_rating: int, rs_rating_thresh: int = 70) -> dict:
+def check_trend_template(ticker: str, df: pd.DataFrame, rs_rating: int, rs_rating_thresh: int = 70, **kwargs) -> dict:
     """
     특정 종목이 마크 미너비니의 트렌드 템플릿 8대 조건을 충족하는지 검사합니다.
     """
@@ -263,7 +263,8 @@ def run_screening_task_2pass(
     vol_dryup_ratio: float = 0.8,
     breakout_pct: float = 0.95,
     max_workers: int = 24,
-    progress_callback = None
+    progress_callback = None,
+    **kwargs
 ) -> tuple:
     """
     [App-20 초고속 멀티스레딩 기반 2-Pass 파이프라인 엔진]
@@ -442,7 +443,8 @@ def run_screener(full_df: pd.DataFrame, stock_list_df: pd.DataFrame,
                  rs_rating_thresh: int = 70, 
                  vcp_amp_limit: float = 0.10, 
                  vol_dryup_ratio: float = 0.8, 
-                 breakout_pct: float = 0.95) -> pd.DataFrame:
+                 breakout_pct: float = 0.95,
+                 **kwargs) -> pd.DataFrame:
     """하위 호환성을 위한 래퍼 함수"""
     tickers = stock_list_df['ticker'].tolist()
     ticker_to_name = dict(zip(stock_list_df['ticker'], stock_list_df['name']))

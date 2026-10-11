@@ -1,5 +1,30 @@
+import sys
+# Python 3.12+ 및 Streamlit Cloud 환경에서 pkg_resources 의존성 결함 방어용 Mock Shim
+try:
+    import pkg_resources
+except Exception:
+    try:
+        import setuptools.command
+        import pkg_resources
+    except Exception:
+        import types
+        pkg_mock = types.ModuleType("pkg_resources")
+        pkg_mock.resource_filename = lambda *args, **kwargs: ""
+        pkg_mock.resource_string = lambda *args, **kwargs: b""
+        pkg_mock.Requirement = type("Requirement", (), {"parse": lambda s: s})
+        pkg_mock.get_distribution = lambda *args, **kwargs: type("Dist", (), {"version": "1.0.0"})()
+        sys.modules["pkg_resources"] = pkg_mock
 
 import streamlit as st
+
+# [가이드 05] Streamlit 명령 최우선 실행 보장 (StreamlitAPIException 및 무한 로딩 방어)
+st.set_page_config(
+    page_title="Mark Minervini Trend Template & VCP Screener",
+    page_icon="🏛️",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
 import pandas as pd
 import numpy as np
 import yfinance as yf
@@ -18,7 +43,6 @@ from plotly.subplots import make_subplots
 
 # 로컬 모듈 임포트 (Streamlit Cloud 환경에서 로컬 모듈 캐시 갱신 보장 및 상세 오류 트래킹)
 import importlib
-import sys
 import os
 
 try:
@@ -33,7 +57,7 @@ except Exception as e:
     import traceback
     st.error(f"모듈 로드 중 오류가 발생했습니다: {e}")
     st.code(traceback.format_exc())
-    raise e
+    st.stop()
 
 # 단일 종목 주가 데이터 캐시 로더 (한국주는 FDR, 미국주는 yfinance)
 @st.cache_data(ttl=3600, show_spinner=False)
@@ -78,14 +102,6 @@ def fmt_curr(val, ticker):
         return f"{val:,.0f}원"
     else:
         return f"${val:,.2f}"
-
-# 페이지 설정
-st.set_page_config(
-    page_title="Mark Minervini Trend Template & VCP Screener",
-    page_icon="🏛️",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
 
 # 커스텀 CSS 스타일 정의 (어두운 테마 가독성 극대화 및 스타일링)
 st.markdown("""

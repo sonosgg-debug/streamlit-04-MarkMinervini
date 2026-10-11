@@ -1,8 +1,12 @@
+setuptools
 streamlit>=1.35.0
 yfinance>=0.2.35
 pandas>=2.0.0
-numpy
-plotly
-openpyxl
-finance-datareader
-requests
+numpy>=1.24.0
+plotly>=5.18.0
+openpyxl>=3.1.0
+requests>=2.31.0
+lxml
+beautifulsoup4>=4.12.0
+finance-datareader>=0.9.50
+python-dotenv>=1.0.0
