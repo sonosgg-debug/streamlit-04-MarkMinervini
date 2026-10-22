@@ -95,13 +95,31 @@ STANDARD_CHART_THEME = {
 }
 
 # 가격 통화 포맷팅 함수
-def fmt_curr(val, ticker):
-    if pd.isna(val) or isinstance(val, str):
+def fmt_curr(val, ticker_or_market):
+    if pd.isna(val) or isinstance(val, str) or val == "":
         return val
-    if ticker.endswith('.KS') or ticker.endswith('.KQ'):
+    t_str = str(ticker_or_market).strip()
+    if t_str in ['KOSPI', 'KOSDAQ'] or t_str.endswith('.KS') or t_str.endswith('.KQ') or t_str.isdigit():
         return f"{val:,.0f}원"
     else:
         return f"${val:,.2f}"
+
+def clean_ticker_code(val):
+    s = str(val).strip()
+    if s.endswith('.KS') or s.endswith('.KQ'):
+        code = s[:-3]
+        return code.zfill(6) if code.isdigit() else code
+    if s.isdigit():
+        return s.zfill(6)
+    return s
+
+def fmt_display_marcap(val, market):
+    if pd.isna(val) or val <= 0:
+        return "-"
+    if market in ['KOSPI', 'KOSDAQ'] or str(market).startswith('K'):
+        return f"{int(round(val)):,}억"
+    else:
+        return f"{int(round(val)):,}"
 
 # 커스텀 CSS 스타일 정의 (어두운 테마 가독성 극대화 및 스타일링)
 st.markdown("""
@@ -544,6 +562,26 @@ if start_screening:
                 elapsed = time.time() - start_time
                 progress_bar.progress(1.0)
                 if screened_res is not None and not screened_res.empty:
+                    # 시장 및 시가총액 안전 보강
+                    if 'market' not in screened_res.columns and 'market' in stock_df.columns:
+                        m_map = dict(zip(stock_df['ticker'], stock_df['market']))
+                        screened_res['market'] = screened_res['Ticker'].map(m_map)
+                    if 'market' not in screened_res.columns or screened_res['market'].isna().any():
+                        def infer_market(t):
+                            t_s = str(t).strip()
+                            if t_s.endswith('.KS'): return 'KOSPI'
+                            if t_s.endswith('.KQ'): return 'KOSDAQ'
+                            if market_code == 'SP': return 'S&P 500'
+                            if market_code == 'NQ': return 'NASDAQ 100'
+                            return 'KOSPI'
+                        screened_res['market'] = screened_res['Ticker'].apply(infer_market)
+
+                    if 'marcap' not in screened_res.columns and 'marcap' in stock_df.columns:
+                        c_map = dict(zip(stock_df['ticker'], stock_df['marcap']))
+                        screened_res['marcap'] = screened_res['Ticker'].map(c_map).fillna(0)
+                    elif 'marcap' not in screened_res.columns:
+                        screened_res['marcap'] = 0
+
                     status_text.success(f"✅ 스크리닝 완료! ({len(screened_res)}개 종목 발굴, 소요 시간: {elapsed:.1f}초)")
                 else:
                     status_text.warning(f"⚠️ 조건에 부합하는 종목이 없습니다. (소요 시간: {elapsed:.1f}초)")
@@ -578,9 +616,11 @@ with tab1:
             excel_buffer = io.BytesIO()
             with pd.ExcelWriter(excel_buffer, engine='openpyxl') as writer:
                 df_excel = st.session_state.screened_df.copy()
+                df_excel['코드/티커'] = df_excel['Ticker'].apply(clean_ticker_code)
                 df_excel_ko = df_excel.rename(columns={
-                    'Ticker': '티커',
                     'Name': '종목명',
+                    'market': '시장',
+                    'marcap': '시가총액(억)',
                     'Current_Price': '현재가',
                     'RS_Rating': '상대강도(RS)',
                     'VCP_Amp1': '마지막진폭(Amp1)',
@@ -592,6 +632,46 @@ with tab1:
                     '52W_High': '52주 최고가',
                     '52W_Low': '52주 최저가'
                 })
+                
+                excel_cols = [
+                    '코드/티커', '종목명', '시장', '시가총액(억)', '현재가',
+                    '상대강도(RS)', '마지막진폭(Amp1)', '신고가대비(%)', '신저가대비(%)',
+                    '50일 이평', '150일 이평', '200일 이평', '52주 최고가', '52주 최저가'
+                ]
+                df_excel_ko = df_excel_ko[[c for c in excel_cols if c in df_excel_ko.columns]].copy()
+                
+                # 수치 데이터 반올림 및 코드/티커 6자리 정제 가공
+                def format_excel_data(row):
+                    mkt = str(row.get('시장', '')).strip()
+                    code_str = str(row.get('코드/티커', '')).strip()
+                    is_kr = mkt in ['KOSPI', 'KOSDAQ'] or code_str.isdigit()
+                    
+                    if is_kr and code_str.isdigit():
+                        row['코드/티커'] = code_str.zfill(6)
+                        
+                    price_cols = ['현재가', '50일 이평', '150일 이평', '200일 이평', '52주 최고가', '52주 최저가']
+                    for col in price_cols:
+                        if col in row and pd.notna(row[col]):
+                            if is_kr:
+                                row[col] = int(round(row[col]))
+                            else:
+                                row[col] = round(row[col], 2)
+                                
+                    if '시가총액(억)' in row and pd.notna(row['시가총액(억)']):
+                        row['시가총액(억)'] = int(round(row['시가총액(억)']))
+                        
+                    for pct_col in ['신고가대비(%)', '신저가대비(%)']:
+                        if pct_col in row and pd.notna(row[pct_col]):
+                            row[pct_col] = round(row[pct_col], 2)
+                            
+                    if '마지막진폭(Amp1)' in row and pd.notna(row['마지막진폭(Amp1)']) and row['마지막진폭(Amp1)'] != 'N/A':
+                        try:
+                            row['마지막진폭(Amp1)'] = round(float(row['마지막진폭(Amp1)']), 2)
+                        except Exception:
+                            pass
+                    return row
+
+                df_excel_ko = df_excel_ko.apply(format_excel_data, axis=1)
                 
                 df_excel_ko.to_excel(writer, index=False, sheet_name='MTT_VCP_Screened')
                 worksheet = writer.sheets['MTT_VCP_Screened']
@@ -618,8 +698,17 @@ with tab1:
                 
                 for row_idx in range(2, max_row + 1):
                     worksheet.row_dimensions[row_idx].height = 20
-                    ticker_val = str(worksheet.cell(row=row_idx, column=1).value or '')
-                    is_kr = ticker_val.endswith('.KS') or ticker_val.endswith('.KQ')
+                    cell_a = worksheet.cell(row=row_idx, column=1)
+                    code_val = str(cell_a.value or '').strip()
+                    if code_val.isdigit():
+                        code_val = code_val.zfill(6)
+                        cell_a.value = code_val
+                    cell_a.number_format = '@'
+                    
+                    # C열(3번째 열: 시장)
+                    cell_c = worksheet.cell(row=row_idx, column=3) if max_col >= 3 else None
+                    mkt_val = str(cell_c.value or '').strip() if cell_c else ''
+                    is_kr = mkt_val in ['KOSPI', 'KOSDAQ'] or code_val.isdigit()
                     
                     for col_idx in range(1, max_col + 1):
                         cell = worksheet.cell(row=row_idx, column=col_idx)
@@ -628,7 +717,7 @@ with tab1:
                         col_name = df_excel_ko.columns[col_idx - 1]
                         val = cell.value
                         
-                        if col_name in ['티커', '상대강도(RS)']:
+                        if col_name in ['코드/티커', '시장', '상대강도(RS)']:
                             cell.alignment = align_center
                         elif col_name == '종목명':
                             cell.alignment = align_left
@@ -636,7 +725,9 @@ with tab1:
                             cell.alignment = align_center
                         else:
                             cell.alignment = align_right
-                            if isinstance(val, (int, float)):
+                            if col_name == '시가총액(억)':
+                                cell.number_format = '#,##0'
+                            elif isinstance(val, (int, float)):
                                 if col_name in ['신고가대비(%)', '신저가대비(%)', '마지막진폭(Amp1)']:
                                     cell.number_format = '0.00"%"'
                                 elif col_name in ['현재가', '50일 이평', '150일 이평', '200일 이평', '52주 최고가', '52주 최저가']:
@@ -712,12 +803,13 @@ with tab1:
             
             # 대시보드 화면용 테이블 포맷팅 가공
             df_display = st.session_state.screened_df.copy()
-            df_display['Current_Price'] = df_display.apply(lambda r: fmt_curr(r['Current_Price'], r['Ticker']), axis=1)
-            df_display['MA_50'] = df_display.apply(lambda r: fmt_curr(r['MA_50'], r['Ticker']), axis=1)
-            df_display['MA_150'] = df_display.apply(lambda r: fmt_curr(r['MA_150'], r['Ticker']), axis=1)
-            df_display['MA_200'] = df_display.apply(lambda r: fmt_curr(r['MA_200'], r['Ticker']), axis=1)
-            df_display['52W_High'] = df_display.apply(lambda r: fmt_curr(r['52W_High'], r['Ticker']), axis=1)
-            df_display['52W_Low'] = df_display.apply(lambda r: fmt_curr(r['52W_Low'], r['Ticker']), axis=1)
+            df_display['코드/티커'] = df_display['Ticker'].apply(clean_ticker_code)
+            df_display['Current_Price'] = df_display.apply(lambda r: fmt_curr(r['Current_Price'], r['market']), axis=1)
+            df_display['MA_50'] = df_display.apply(lambda r: fmt_curr(r['MA_50'], r['market']), axis=1)
+            df_display['MA_150'] = df_display.apply(lambda r: fmt_curr(r['MA_150'], r['market']), axis=1)
+            df_display['MA_200'] = df_display.apply(lambda r: fmt_curr(r['MA_200'], r['market']), axis=1)
+            df_display['52W_High'] = df_display.apply(lambda r: fmt_curr(r['52W_High'], r['market']), axis=1)
+            df_display['52W_Low'] = df_display.apply(lambda r: fmt_curr(r['52W_Low'], r['market']), axis=1)
             
             df_display['Pct_Below_High'] = df_display['Pct_Below_High'].map('{:.2f}%'.format)
             df_display['Pct_Above_Low'] = df_display['Pct_Above_Low'].map('{:.2f}%'.format)
@@ -730,8 +822,9 @@ with tab1:
             
             # 한글 컬럼 매핑 및 전시
             df_display_ko = df_display.rename(columns={
-                'Ticker': '티커',
                 'Name': '종목명',
+                'market': '시장',
+                'marcap': '시가총액(억)',
                 'Current_Price': '현재가',
                 'RS_Rating': '상대강도(RS)',
                 'VCP_Amp1': '마지막진폭(Amp1)',
@@ -743,6 +836,15 @@ with tab1:
                 '52W_High': '52주 최고가',
                 '52W_Low': '52주 최저가'
             })
+            
+            df_display_ko['시가총액(억)'] = df_display_ko.apply(lambda r: fmt_display_marcap(r['시가총액(억)'], r['시장']), axis=1)
+            
+            desired_cols = [
+                '코드/티커', '종목명', '시장', '시가총액(억)', '현재가',
+                '상대강도(RS)', '마지막진폭(Amp1)', '신고가대비(%)', '신저가대비(%)',
+                '50일 이평', '150일 이평', '200일 이평', '52주 최고가', '52주 최저가'
+            ]
+            df_display_ko = df_display_ko[[c for c in desired_cols if c in df_display_ko.columns]].copy()
             
             st.dataframe(df_display_ko, use_container_width=True)
             

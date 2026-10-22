@@ -205,7 +205,7 @@ def get_stock_list(market_code: str, scope: str = 'top500', min_marcap_eok: int 
         df = get_krx_raw_listing(market_name)
         if df is None or df.empty:
             print(f"[경고] {market_name} 종목 목록 수집 실패")
-            return pd.DataFrame(columns=['ticker', 'name'])
+            return pd.DataFrame(columns=['ticker', 'name', 'market', 'marcap'])
 
         if 'Code' not in df.columns and 'Symbol' in df.columns:
             df['Code'] = df['Symbol']
@@ -248,6 +248,9 @@ def get_stock_list(market_code: str, scope: str = 'top500', min_marcap_eok: int 
             min_won = min_marcap_eok * 100_000_000
             df_sorted = df_sorted[df_sorted['Marcap_Num'] >= min_won].reset_index(drop=True)
 
+        df_sorted['market'] = market_name
+        df_sorted['marcap'] = (df_sorted['Marcap_Num'] / 100_000_000).round().astype(int)
+
         if scope == 'top300':
             df_res = df_sorted.head(300)
         elif scope == 'top500':
@@ -257,7 +260,7 @@ def get_stock_list(market_code: str, scope: str = 'top500', min_marcap_eok: int 
         else:
             df_res = df_sorted
 
-        return df_res[['ticker', 'name']].dropna().drop_duplicates(subset=['ticker']).reset_index(drop=True)
+        return df_res[['ticker', 'name', 'market', 'marcap']].dropna().drop_duplicates(subset=['ticker']).reset_index(drop=True)
 
     elif market_code == 'SP':
         try:
@@ -268,14 +271,18 @@ def get_stock_list(market_code: str, scope: str = 'top500', min_marcap_eok: int 
             df_res = pd.DataFrame()
             df_res['name'] = df_sp500['Security']
             df_res['ticker'] = df_sp500['Symbol'].astype(str).str.replace('.', '-', regex=False)
+            df_res['market'] = 'S&P 500'
+            df_res['marcap'] = 0
             if scope == 'top300':
                 df_res = df_res.head(300)
-            return df_res[['ticker', 'name']].dropna().drop_duplicates(subset=['ticker']).reset_index(drop=True)
+            return df_res[['ticker', 'name', 'market', 'marcap']].dropna().drop_duplicates(subset=['ticker']).reset_index(drop=True)
         except Exception:
             df = fdr.StockListing('S&P500')
             df['ticker'] = df['Symbol'].str.replace('.', '-', regex=False)
             df['name'] = df['Name']
-            return df[['ticker', 'name']].dropna().drop_duplicates(subset=['ticker']).reset_index(drop=True)
+            df['market'] = 'S&P 500'
+            df['marcap'] = 0
+            return df[['ticker', 'name', 'market', 'marcap']].dropna().drop_duplicates(subset=['ticker']).reset_index(drop=True)
 
     elif market_code == 'NQ':
         nasdaq_url = "https://en.wikipedia.org/wiki/List_of_NASDAQ-100_companies"
@@ -288,9 +295,11 @@ def get_stock_list(market_code: str, scope: str = 'top500', min_marcap_eok: int 
                 df_result = pd.DataFrame()
                 df_result['name'] = d['Company']
                 df_result['ticker'] = d['Ticker'].astype(str).str.replace('.', '-', regex=False)
+                df_result['market'] = 'NASDAQ 100'
+                df_result['marcap'] = 0
                 break
         if df_result is not None and not df_result.empty:
-            return df_result[['ticker', 'name']].dropna().drop_duplicates(subset=['ticker']).reset_index(drop=True)
+            return df_result[['ticker', 'name', 'market', 'marcap']].dropna().drop_duplicates(subset=['ticker']).reset_index(drop=True)
         else:
             raise ValueError("NASDAQ 100 table not found in Wikipedia page.")
     else:
